@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <form action="" method="post">
+        {% csrf_token %}
+        {{ form }}
+        <input type="submit">
+    </form>
+
+    {% if form.is_valid %}
+        <p> The model predicted_a: <b>{{ load_model_a }}</b></p>
+        <p> The model predicted_b: <b>{{ load_model_b }}</b></p>
+    {% endif %}
+
+
+</body>
+</html>
