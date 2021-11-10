@@ -10,7 +10,6 @@ from datetime import datetime
 import pickle, progressbar, json, glob, time
 from tqdm import tqdm
 from urllib.request import Request, urlopen
-from openpyxl.workbook import Workbook
 
 ###### 날짜 저장 ##########
 date = str(datetime.now())
@@ -41,11 +40,17 @@ def crawling_main_text(url):
 
     # 경향신문
     elif 'khan' in url:
-        text = soup.find('div', {'id': 'articleBody'}).text
+        try:
+            text = soup.find('div', {'id': 'articleBody'}).text
+        except Exception as e:
+            return
 
     # 중앙일보
     elif 'joongang' in url:
-        text = soup.find('div', {'id': 'article_body'}).text
+        try:
+            text = soup.find('div', {'id': 'article_body'}).text
+        except Exception as e:
+            return
 
     # 그 외
     else:
@@ -55,7 +60,7 @@ def crawling_main_text(url):
     return lists
 
 
-press_nm = input('언론사 입력:(경향신문, 중앙일보)')
+press_nm = input('언론사 입력:(경향신문, 중앙일보)  :')
 
 # print('검색할 언론사 : {}'.format(press_nm))
 
@@ -126,7 +131,7 @@ for press_kind_btn in press_kind_btn_list:
 ################ 뉴스 크롤링 ########################
 
 print('\n크롤링을 시작합니다.')
-# ####동적 제어로 페이지 넘어가며 크롤링
+#####동적 제어로 페이지 넘어가며 크롤링
 
 news_dict = {'text': []}
 idx = 1
@@ -145,12 +150,14 @@ while idx < news_num:
         lists = []
         n_url = n.get_attribute('href')
         lists = crawling_main_text(n_url)
+        if not lists:
+            continue
         idx += 1
         print(lists)
         for line in lists:
             line.strip()
             line.replace('구글 지도화면 갈무리', '').replace('\n', '')
-            if line.find("소식통") > 0:
+            if line.find(query) > 0:
                 result.append(line)
                 news_dict['text'].append(line)
                 print(line)
