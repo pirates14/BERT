@@ -153,10 +153,10 @@ while idx < news_num:
         if not lists:
             continue
         idx += 1
-        print(lists)
         for line in lists:
             line.strip()
             line.replace('구글 지도화면 갈무리', '').replace('\n', '')
+            line = ' '.join(line.split())
             if line.find(query) > 0:
                 result.append(line)
                 news_dict['text'].append(line)
