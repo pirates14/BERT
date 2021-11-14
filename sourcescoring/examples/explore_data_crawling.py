@@ -74,7 +74,6 @@ def crawling_main_text(url):
         except Exception as e:
             return
 
-
     # 그 외
     else:
         text == None
