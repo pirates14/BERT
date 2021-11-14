@@ -10,24 +10,27 @@ from datetime import datetime
 import pickle, progressbar, json, glob, time
 from tqdm import tqdm
 from urllib.request import Request, urlopen
+import urllib3
+
+urllib3.disable_warnings()
 
 ###### 날짜 저장 ##########
 date = str(datetime.now())
 date = date[:date.rfind(':')].replace(' ', '_')
 date = date.replace(':', '시') + '분'
 sleep_sec = 0.5
-result = []
 
 ####### 언론사별 본문 위치 태그 파싱 함수 ###########
 print('본문 크롤링에 필요한 함수를 로딩하고 있습니다...\n' + '-' * 100)
 
 
 def crawling_main_text(url):
+    print(url)
+    if not url:
+        return
     lists = []
-    # headers = {'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'}
-
-    req = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
-    # source_code_from_url = urlopen(req).read()
+    global text
+    req = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, verify=False)
     req.encoding = None
     soup = BeautifulSoup(req.content, 'html.parser')
     # 연합뉴스
@@ -39,31 +42,47 @@ def crawling_main_text(url):
         text = main_article.text
 
     # 경향신문
-    elif 'khan' in url:
+    elif 'khan' in url or 'oid=032' in url:
+        error = ''
+        text = None
         try:
             text = soup.find('div', {'id': 'articleBody'}).text
         except Exception as e:
+            error = 'e'
+            # return
+
+        if not text:
+            try:
+                text = soup.find('div', {'id': 'container'}).text
+            except Exception as e:
+                error = 'e'
+                # return
+        if not text:
+            try:
+                text = soup.find('div', {'class': 'end_body_wrp'}).text
+            except Exception as e:
+                error = 'e'
+                # return
+        if error == 'e':
             return
 
     # 중앙일보
-    elif 'joongang' in url:
+    elif 'joongang' in url or 'joins' in url:
         try:
             text = soup.find('div', {'id': 'article_body'}).text
+            print(url)
         except Exception as e:
             return
+
 
     # 그 외
     else:
         text == None
-
     lists = text.split('.')
     return lists
 
 
 press_nm = input('언론사 입력:(경향신문, 중앙일보)  :')
-
-# print('검색할 언론사 : {}'.format(press_nm))
-
 
 ############### 브라우저를 켜고 검색 키워드 입력 ####################
 query = input('검색할 키워드  : ')
@@ -148,35 +167,48 @@ while idx < news_num:
 
     for n in a_list[:min(len(a_list), news_num - idx + 1)]:
         lists = []
+        n_url = ''
         n_url = n.get_attribute('href')
+        if n_url == '':
+            continue
         lists = crawling_main_text(n_url)
+        idx += 1
         if not lists:
             continue
-        idx += 1
-        for line in lists:
-            line.strip()
-            line.replace('구글 지도화면 갈무리', '').replace('\n', '')
-            line = ' '.join(line.split())
-            if line.find(query) > 0:
-                result.append(line)
-                news_dict['text'].append(line)
-                print(line)
-            else:
-                pass
+        else:
+            for line in lists:
+                if not line:
+                    continue
 
-        pbar.update(1)
+                line.strip()
+                line.replace('구글 지도화면 갈무리', '').replace('\n', '')
+                line = ' '.join(line.split())
+                if line.find(query) > 0:
+                    news_dict['text'].append(line)
+                    print(n.get_attribute('title'))
+                    print(line)
+                else:
+                    pass
+
+            pbar.update(1)
 
     if idx < news_num:
         cur_page += 1
         pages = browser.find_element_by_xpath('//div[@class="sc_page_inner"]')
+        print(pages.find_elements_by_xpath('.//a'))
+        check = [p for p in pages.find_elements_by_xpath('.//a') if p.text == str(cur_page)]
+        if not check:
+            pbar.close()
+            print('\n더이상 기사가 없습니다.\n')
+            time.sleep(0.7)
+            browser.close()
+            break
         next_page_url = [p for p in pages.find_elements_by_xpath('.//a') if p.text == str(cur_page)][0].get_attribute(
             'href')
-
         browser.get(next_page_url)
         time.sleep(sleep_sec)
     else:
         pbar.close()
-
         print('\n브라우저를 종료합니다.\n' + '=' * 100)
         time.sleep(0.7)
         browser.close()
