@@ -4,7 +4,7 @@ from sklearn.metrics import f1_score
 from transformers import BertForTokenClassification, AdamW
 from tqdm import tqdm, trange
 from DataPreprocessing import df1, train_dataloader
-from fi.NerAnmBert import NerAnmBert
+from NAB.NerAnmBert import NerAnmBert
 
 
 def main():
