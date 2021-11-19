@@ -1,9 +1,7 @@
-import torch
-from transformers import AutoTokenizer
-
-from DataPreprocessing import Label_encoder1, Label_encoder2
-from transformers import pipeline
-
+"""
+main_infer.py는 모델의 예측값을 정성적으로 살펴보기 위한 스크립트입니다.
+e.g. https://github.com/wisdomify/wisdomify/blob/main/main_infer.py
+"""
 
 def main():
     tokenizer = AutoTokenizer.from_pretrained('beomi/kcbert-base')
@@ -20,6 +18,8 @@ def main():
 
     for entity1, entity2 in zip(anm(test_sentence), ner(test_sentence)):
         print([Label_encoder1.inverse_transform([int(entity1['entity'][-1])])][0], [Label_encoder2.inverse_transform([int(entity2['entity'][-1])])][0], entity1['word'])
+
+
 
 if __name__ == '__main__':
     main()

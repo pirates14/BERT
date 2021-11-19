@@ -1,0 +1,12 @@
+source_anm_ner:
+  max_epochs:  30
+  lr: 3e-5
+  eps: 1e-8
+source_ner:
+  max_epochs: 30
+  lr: 3e-5
+  eps: 1e-8
+anm_ner:
+  max_epochs: 30
+  lr: 3e-5
+  eps: 1e-8
