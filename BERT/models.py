@@ -2,7 +2,7 @@ import torch
 import pytorch_lightning as pl
 from typing import Tuple
 from argparse import Namespace
-from transformers import BertForTokenClassification
+from transformers import BertModel
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 
 
@@ -10,9 +10,11 @@ class MultiLabelNER(pl.LightningModule):
     """
     글자당 여러개의 개체명을 인식하는 모델.
     """
-    def __init__(self, bert_tc: BertForTokenClassification, lr: float):
+    def __init__(self, bert: BertModel, lr: float):
         super().__init__()
-        self.bert_tc = bert_tc
+        self.bert = bert
+        self.W_1 = torch.nn.Linear(..., ...)
+        self.W_2 = torch.nn.Linear(..., ...)
         self.save_hyperparameters(Namespace(lr=lr))
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
@@ -22,11 +24,13 @@ class MultiLabelNER(pl.LightningModule):
         attention_mask = inputs['attention_mask']
         labels_1 = targets['labels_1']
         labels_2 = targets['labels_2']
-        H_all = ...   # ... -> (N, L, H)
-        logits = ...  # ... -> (N, L, T)
-        logits_1 = ...  # ... -> (N, L,
-        loss_1 = ...
-        loss_2 = ...
+        H_all = self.bert(...)   # ... -> (N, L, H)
+        # H_all로 부터 각 레이블에 해당하는 로짓값을 구하기
+        logits_1 = self.W_1(H_all)  # ... -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수
+        logits_2 = self.W_2(H_all)  # ... -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수
+        # 각 로짓값으로부터 로스를 계산하기.
+        loss_1 = ...  # cross entropy with  labels_1
+        loss_2 = ...  # cross entropy with labels_2
         # multitask learning
         loss = loss_1 + loss_2
         return {
@@ -55,9 +59,10 @@ class NER(pl.LightningModule):
     """
     글자당 하나의 개체명만을 인식하는 모델
     """
-    def __init__(self, bert_tc: BertForTokenClassification, lr: float):
+    def __init__(self, bert: BertModel, lr: float):
         super().__init__()
-        self.bert_tc = bert_tc
+        self.bert = bert
+        self.W_labels = torch.nn.Linear(..., ...)
         self.save_hyperparameters(Namespace(lr=lr))
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:

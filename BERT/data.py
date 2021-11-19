@@ -5,13 +5,13 @@ import pytorch_lightning as pl
 import torch
 
 
-class BERTDataset(Dataset):
+class NERDataset(Dataset):
 
-    def __init__(self,  X: torch.Tensor, Y: torch.Tensor):
-        self.X = X
-        self.Y = Y
+    def __init__(self,  inputs: torch.Tensor, targets: torch.Tensor):
+        self.inputs = inputs
+        self.targets = targets
 
-    def __getitem__(self, index) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, index: int) -> Dict[str, torch.Tensor]:
         # TODO: X, Y의 차원을 고려하여, 배치를 출력하기.
         # e.g.        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
         #         item['labels'] = torch.tensor(self.labels[idx])
@@ -23,7 +23,7 @@ class BERTDataset(Dataset):
 
 
 # TODO: datamodule을 정의하세요!
-class BERTDatamodule(pl.LightningDataModule):
+class NERDatamodule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> None:
         """
         데이터 전처리는 여기에.
