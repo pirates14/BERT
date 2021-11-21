@@ -8,40 +8,18 @@ import torch
 class NERDataset(Dataset):
 
     def __init__(self,  inputs: torch.Tensor, targets: torch.Tensor):
-        self.inputs = inputs
-        self.targets = targets
+        self.inputs = inputs  # (N, L, 3)
+        self.targets = targets  # (N, L, 2)
 
-    def __getitem__(self, index: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         # TODO: X, Y의 차원을 고려하여, 배치를 출력하기.
         # e.g.        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
         #         item['labels'] = torch.tensor(self.labels[idx])
         #         return item
-        pass
+        return self.inputs[index], self.targets[index]
 
     def __len__(self):
-        pass
-
-
-# TODO: datamodule을 정의하세요!
-class NERDatamodule(pl.LightningDataModule):
-    def setup(self, stage: Optional[str] = None) -> None:
-        """
-        데이터 전처리는 여기에.
-        """
-        pass
-
-    def train_dataloader(self) -> TRAIN_DATALOADERS:
-        pass
-
-    # --- not using these below for now --- #
-    def test_dataloader(self) -> EVAL_DATALOADERS:
-        pass
-
-    def val_dataloader(self) -> EVAL_DATALOADERS:
-        pass
-
-    def predict_dataloader(self) -> EVAL_DATALOADERS:
-        pass
+        return self.targets.shape[0]
 
 
 # include this under setup method

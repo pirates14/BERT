@@ -18,13 +18,15 @@ class MultiLabelNER(pl.LightningModule):
         self.save_hyperparameters(Namespace(lr=lr))
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
-        inputs, targets = batch
-        input_ids = inputs['input_ids']
-        token_type_ids = inputs['token_type_ids']
-        attention_mask = inputs['attention_mask']
-        labels_1 = targets['labels_1']
-        labels_2 = targets['labels_2']
-        H_all = self.bert(...)   # ... -> (N, L, H)
+        inputs, targets = batch  # (N, L, 3), (N, L, 2)
+        input_ids = inputs[:, 0]  # (N, 3, L) -> (N, L)
+        token_type_ids = inputs[:, 1]  # (N, 3, L) -> (N, L)
+        attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
+        labels_anm = targets[:, 0]  # (N, 2, L) -> (N, L)
+        labels_ner = targets[:, 1]
+        H_all = self.bert(input_ids=input_ids,
+                          token_type_ids=token_type_ids,
+                          attention_mask=attention_mask)   # ... -> (N, L, H)
         # H_all로 부터 각 레이블에 해당하는 로짓값을 구하기
         logits_1 = self.W_1(H_all)  # ... -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수
         logits_2 = self.W_2(H_all)  # ... -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수
@@ -65,15 +67,9 @@ class NER(pl.LightningModule):
         self.W_labels = torch.nn.Linear(..., ...)
         self.save_hyperparameters(Namespace(lr=lr))
 
-    def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
-        X, Y = batch
-        input_ids = X[:, 0]
-        token_type_ids = X[:, 1]
-        attention_mask = X[:, 2]
-        labels_source = Y[:, 0]
-        ...
+    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor]) -> dict:
+        pass
         loss = ...
-        # multitask learning
         return {
             "loss": loss
         }
