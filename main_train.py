@@ -8,19 +8,21 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import BertTokenizer, BertModel
 
 from BERT.dataset import NERDataset, SentenceGetter
-from BERT.loaders import load_petite
+from BERT.loaders import load_petite, load_config
 from BERT.models import MultiLabelNER
 from BERT.tensors import InputsBuilder, TargetsBuilder
 from BERT.paths import SOURCE_ANM_NER_CKPT
 
 
 def main():
+    config = load_config()
     sentences = SentenceGetter(load_petite()).sentences
-    tokenizer = BertTokenizer.from_pretrained('kykim/bert-kor-base')
-    bert = BertModel.from_pretrained('kykim/bert-kor-base')
+    tokenizer = BertTokenizer.from_pretrained(config['bert'])
+    bert = BertModel.from_pretrained(config['bert'])
+    # TODO: config 사용하기
     inputs = InputsBuilder(tokenizer, sentences=sentences, max_len=100)
     targets = TargetsBuilder(tokenizer, sentences=sentences, max_len=100)
-    dataset = NERDataset(inputs=inputs.__call__(), targets=targets.__call__())
+    dataset = NERDataset(inputs=inputs(), targets=targets())
     dataloader = DataLoader(dataset)
 
     multi_label_ner = MultiLabelNER(bert=bert, lr=5e-6)

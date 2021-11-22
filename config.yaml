@@ -1,12 +1,4 @@
-source_anm_ner:
-  max_epochs:  30
-  lr: 3e-5
-  eps: 1e-8
-source_ner:
-  max_epochs: 30
-  lr: 3e-5
-  eps: 1e-8
-anm_ner:
-  max_epochs: 30
-  lr: 3e-5
-  eps: 1e-8
+bert: 'kykim/bert-kor-base'
+max_epochs:  30
+max_length: 100
+lr: 5e-6
