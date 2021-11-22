@@ -10,9 +10,13 @@ def main():
 
 
     # konlpy등을 사용해서 미리 토큰화하기. tokens = okt.morphs(sent)
-    tokens = ["모 순", "# # 아 니", "##냐는", "비 판 이", "일 각", "##에서", "나왔다"]
+    tokens = [["모순", "##아니", "##냐는", "비판이", "일각", "##에서", "나왔다"],
+              ["모순", "##아니", "##냐는", "비판이", "일각", "##에서"]]
     encoded = tokenizer(tokens,
-                        is_split_into_words=True)
+                        is_split_into_words=True,
+                        padding=True,
+                        truncation=True,
+                        add_special_tokens=True)
     print(encoded['input_ids'])
     print([tokenizer.decode(token_id) for token_id in encoded['input_ids']])
 
