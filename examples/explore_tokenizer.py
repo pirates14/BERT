@@ -1,4 +1,5 @@
-from transformers import BertTokenizer
+import torch
+from transformers import BertTokenizer, AutoTokenizer
 
 
 def main():
