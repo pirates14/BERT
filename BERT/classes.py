@@ -1,12 +1,22 @@
 
-
 ANM_CLASSES = [
-    "o",  # -> 0
-    "B-ANM", # -> 1
-    "I-ANM"  #  -> 2
+    "O",  # -> 0
+    "ANM-B", # -> 1
+    "ANM-I"     # -> 2
 ]
 
-
 NER_CLASSES = [
-    # TODO: 클래스를 정의( 정수 인코딩)
+    'O',
+    'PER-B',
+    'PER-I',
+    'ORG-B',
+    'ORG-I',
+    'LOC-B',
+    'LOC-I',
+    'WHY-B',
+    'WHY-I',
+    'FLD-B',
+    'FLD-I',
+    'ETC-B',
+    'ETC-I'
 ]

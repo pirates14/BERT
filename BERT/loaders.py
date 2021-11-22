@@ -4,7 +4,6 @@
 
 import pandas as pd
 import yaml
-import torch
 from BERT.paths import CONFIG_JSON, PETITE_CSV
 
 
@@ -16,4 +15,4 @@ def load_config() -> dict:
 
 
 def load_petite() -> pd.DataFrame:
-    return pd.read_csv(PETITE_CSV)
+    return pd.read_csv(PETITE_CSV, encoding='cp949')
