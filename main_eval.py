@@ -1,10 +1,13 @@
 """
 main_eval.py 스크립트는 모델을 평가하기 위한 스크립트입니다.
 e.g.: https://github.com/wisdomify/wisdomify/blob/main/main_eval.py
+지표를 계산 (acc, f1_score)
 """
 
 
 def main():
+    targets_builder = ...
+
     # 참고:
     # just use.. datamodule & metric.
     # as for this, you would need more data.

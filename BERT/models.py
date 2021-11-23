@@ -1,6 +1,6 @@
 import torch
 import pytorch_lightning as pl
-from typing import Tuple
+from typing import Tuple, List
 from argparse import Namespace
 
 import torchmetrics
@@ -8,6 +8,7 @@ from torch import nn
 from transformers import BertModel
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.nn import functional as F
+
 
 class MultiLabelNER(pl.LightningModule):
     """
@@ -19,20 +20,21 @@ class MultiLabelNER(pl.LightningModule):
         self.W_1 = nn.Linear(self.bert.config.hidden_size, 3)
         self.drop = nn.Dropout(p=0.3)
         self.W_2 = nn.Linear(self.bert.config.hidden_size, 13)
-        self.lr = lr
         self.accuracy = torchmetrics.Accuracy()
-        # self.save_hyperparameters(Namespace(lr=lr))
+        self.save_hyperparameters(Namespace(lr=lr))
 
-    def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
-        inputs, targets = batch  # (N, L, 3), (N, L, 2)
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         input_ids = inputs[:, 0]  # (N, 3, L) -> (N, L)
         token_type_ids = inputs[:, 1]  # (N, 3, L) -> (N, L)
         attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
-        labels_1 = targets[:, 0]  # (N, 2, L) -> (N, L)
-        labels_2 = targets[:, 1]  # (N, 2, L) -> (N, L)
         H_all = self.bert(input_ids=input_ids,
                           token_type_ids=token_type_ids,
                           attention_mask=attention_mask)[0]   # (N, L, H)
+        return H_all
+
+    def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
+        inputs, targets = batch  # (N, L, 3), (N, L, 2)
+        H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
 
         # H_all로 부터 각 레이블에 해당하는 로짓값을 구하기
         # a = H_all.size()    -> 1, 100, 768
@@ -41,6 +43,9 @@ class MultiLabelNER(pl.LightningModule):
 
         logits_1 = torch.einsum("nlc->ncl", logits_1)    # (N, L, T_1) -> (N, T_1, L)
         logits_2 = torch.einsum("nlc->ncl", logits_2)    # (N, L, T_2) -> (N, T_2, L)
+
+        labels_1 = targets[:, 0]  # (N, 2, L) -> (N, L)
+        labels_2 = targets[:, 1]  # (N, 2, L) -> (N, L)
 
         loss_1 = F.cross_entropy(logits_1, labels_1)    # (N, T_1, L), (N, L) -> (N, L)
         loss_2 = F.cross_entropy(logits_2, labels_2)    # (N, T_2, L), (N, L) -> (N, L)
@@ -51,7 +56,6 @@ class MultiLabelNER(pl.LightningModule):
         # 정확도 계산
         acc1 = self.accuracy(logits_1, labels_1)
         self.log("anm_acc", acc1, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-
         acc2 = self.accuracy(logits_2, labels_2)
         self.log("ner_acc", acc2, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
@@ -61,9 +65,27 @@ class MultiLabelNER(pl.LightningModule):
             "loss": loss
         }
 
+    def on_train_epoch_end(self) -> None:
+        # TODO: 이걸 왜하는지 주석 달아주세요! (태형님)
+        self.accuracy.reset()
+
+    def predict(self, inputs: torch.Tensor) -> List[List[Tuple[str, int, int]]]:
+        """
+        :param inputs: (N, 3, L)
+        :return:
+        """
+        # TODO: inference 진행하기! (은정님, 태형님)
+        # torch.softmax
+        # torch.argmax
+        # Tensor.tolist()
+        H_all = self.forward(inputs)  # (N,3, L) -> (N, L, H)
+
+        predictions = ...
+        return predictions
+
     def configure_optimizers(self):
         # 옵티마이저 설정은 여기에서
-        return torch.optim.AdamW(self.parameters(), lr=self.lr)
+        return torch.optim.AdamW(self.parameters(), lr=self.hparams['lr'])
 
     # boilerplate - 필요는 없는데 구현은 해야해서 그냥 여기에 둠.
     def train_dataloader(self) -> TRAIN_DATALOADERS:

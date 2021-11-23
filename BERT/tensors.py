@@ -24,7 +24,7 @@ class InputsBuilder(TensorBuilder):
 
     def __call__(self) -> torch.Tensor:
         sent2tokens = [
-            [word for word, anm_label, ner_label in sentence]
+            [word for word, _, _ in sentence]
             for sentence in self.sentences
         ]
 
