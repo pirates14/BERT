@@ -23,26 +23,19 @@ class InputsBuilder(TensorBuilder):
         self.max_len = max_len
 
     def __call__(self) -> torch.Tensor:
-        # TODO: 입력행렬 (X)를 출력하는 빌더를 구현하기
-
         sent2tokens = [
             [word for word, anm_label, ner_label in sentence]
             for sentence in self.sentences
         ]
-        encoded = self.tokenizer(text=sent2tokens,
-                                 add_special_tokens=False,
-                                 is_split_into_words=True,
-                                 padding='max_length',
-                                 max_length=self.max_len,
-                                 truncation=True,
-                                 return_tensors='pt')
 
-        # input 차원 : ( N, 3, L ) -> print(inputs.size())로 확인 가능 / type : torch.tensor
-        inputs = torch.stack([encoded['input_ids'],
-                              encoded['token_type_ids'],
-                             encoded['attention_mask']], dim=1)
+        encoded = [self.tokenizer.convert_tokens_to_ids(tokens) for tokens in sent2tokens]
+        input_ids = torch.LongTensor(pad_sequences(encoded, maxlen=self.max_len, dtype=int,
+                                                   padding="post", value=self.tokenizer.pad_token_id)) # 패딩 토큰을 토크나이저에서 가져오기
+        token_type_ids = torch.zeros(size=(len(sent2tokens), self.max_len))  # 어차피 첫문장만 있음
+        attention_mask = torch.where(input_ids != self.tokenizer.pad_token_id, 1, 0)  # 패딩인 것은 필요 없음
+        inputs = torch.stack([input_ids, token_type_ids, attention_mask], dim=1)
 
-        return inputs.to('cpu')
+        return inputs.long()
 
 
 class TargetsBuilder(TensorBuilder):
@@ -77,23 +70,24 @@ class TargetsBuilder(TensorBuilder):
             for sentence in self.sentences
         ]
 
-        anm_targets_p = pad_sequences(anm_targets, maxlen=self.max_len, padding='post')
-        ner_targets_p = pad_sequences(ner_targets, maxlen=self.max_len, padding='post')
+        anm_targets_p = pad_sequences(anm_targets, maxlen=self.max_len, padding='post', value=ANM_CLASSES.index("O"))
+        ner_targets_p = pad_sequences(ner_targets, maxlen=self.max_len, padding='post', value=NER_CLASSES.index("O"))
 
         # (N, 2, L)
         targets = torch.stack([torch.Tensor(anm_targets_p),
                                torch.Tensor(ner_targets_p)], dim=1)
 
-
         return targets.long()
 
 
-tokenizer = BertTokenizer.from_pretrained('kykim/bert-kor-base')
+# tokenizer = BertTokenizer.from_pretrained('kykim/bert-kor-base')
 
 # if __name__ == "__main__":
+#     sentences = SentenceGetter(load_petite()).sentences
 #     debug = InputsBuilder(tokenizer=tokenizer, max_len=100, sentences=sentences)
 #     debug.__call__()
 
 # if __name__ == "__main__":
+#     sentences = SentenceGetter(load_petite()).sentences
 #     debug = TargetsBuilder( tokenizer=tokenizer, sentences=sentences, max_len=100)
 #     debug.__call__()

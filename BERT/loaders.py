@@ -8,7 +8,6 @@ from BERT.paths import CONFIG_JSON, PETITE_CSV
 
 
 # exactly the same as:
-# https://github.com/wisdomify/wisdomify/blob/main/wisdomify/loaders.py
 def load_config() -> dict:
     with open(CONFIG_JSON, encoding="utf-8") as fh:
         return yaml.safe_load(fh)

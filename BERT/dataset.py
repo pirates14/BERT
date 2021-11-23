@@ -1,14 +1,7 @@
-from typing import Optional,  Dict, Tuple
+from typing import Tuple
 
-from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
-from torch.utils.data import Dataset, DataLoader
-import pytorch_lightning as pl
+from torch.utils.data import Dataset
 import torch
-
-from BERT.loaders import load_petite
-
-
-# https://github.com/wisdomify/wisdomify/blob/main/wisdomify/datamodules.py
 
 
 class NERDataset(Dataset):
@@ -18,12 +11,10 @@ class NERDataset(Dataset):
         self.targets = targets  # (N, 2, L)
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        # TODO: X, Y의 차원을 고려하여, 배치를 출력하기.
         # e.g.
         # item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
         # item['labels'] = torch.tensor(self.labels[idx])
         # return item
-
         return self.inputs[index], self.targets[index]
 
     def __len__(self):
@@ -59,8 +50,5 @@ class SentenceGetter(object):
           # 문장이 없을 때 예외 처리
             return None
 
-#
 # getter = SentenceGetter(load_petite())
 # sentences = getter.sentences        # list[list[tuple(word,anm,ner)]]
-
-

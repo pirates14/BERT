@@ -1,4 +1,4 @@
 bert: 'kykim/bert-kor-base'
-max_epochs:  30
+max_epochs: 10
 max_length: 100
 lr: 5e-6

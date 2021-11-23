@@ -19,20 +19,21 @@ def main():
     sentences = SentenceGetter(load_petite()).sentences
     tokenizer = BertTokenizer.from_pretrained(config['bert'])
     bert = BertModel.from_pretrained(config['bert'])
-    # TODO: config 사용하기
-    inputs = InputsBuilder(tokenizer, sentences=sentences, max_len=100)
-    targets = TargetsBuilder(tokenizer, sentences=sentences, max_len=100)
+
+    inputs = InputsBuilder(tokenizer, sentences=sentences, max_len=config['max_length'])
+    targets = TargetsBuilder(tokenizer, sentences=sentences, max_len=config['max_length'])
     dataset = NERDataset(inputs=inputs(), targets=targets())
     dataloader = DataLoader(dataset)
 
-    multi_label_ner = MultiLabelNER(bert=bert, lr=5e-6)
+    multi_label_ner = MultiLabelNER(bert=bert, lr=float(config['lr']))
 
     # 파라미터를 보고 싶다: ctrl + p
     # 문서를 보고싶다: fn + 1
-    trainer = pl.Trainer(max_epochs=10,
+    trainer = pl.Trainer(max_epochs=config['max_epochs'],
                          enable_checkpointing=False)
     # 학습을 진행한다
     trainer.fit(model=multi_label_ner, train_dataloader=dataloader)
+
     # 모델학습이 진행이된다.
     trainer.save_checkpoint(filepath=SOURCE_ANM_NER_CKPT)
 
