@@ -10,7 +10,7 @@ from BERT.loaders import load_config
 from BERT.models import MultiLabelNER
 from BERT.paths import SOURCE_ANM_NER_CKPT
 from BERT.tensors import InputsBuilder
-from BERT.classes import NER_CLASSES, ANM_CLASSES
+from BERT.classes import SOURCE_CLASSES, ANM_CLASSES
 
 
 def main():
@@ -42,13 +42,20 @@ def main():
     model.freeze()
 
     # 원하는 결과
-    predictions: List[List[Tuple[str, int, int]]] = model.predict(inputs)
-    for i in predictions:
-        if i[0] != 0:
-            word = tokenizer.decode(i[0])
-            anm = ANM_CLASSES[i[1]]
-            ner = NER_CLASSES[i[2]]
-            print('단어: {}, anm: {}, ner: {}'.format(word, anm, ner))
+    anm_labels, source_labels = model.predict(inputs)  # (N, 3, L) -> (1, L), (1, L)
+    anm_labels = anm_labels[0]  # (1, L) -> (L,)
+    source_labels = source_labels[0]  # (1, L) -> (L,)
+
+    for word, anm_label, source_label in zip(tokens, anm_labels, source_labels):
+        #  관계자는, B-ANM, B-PERSON
+        print(word, ANM_CLASSES[anm_label], SOURCE_CLASSES[source_label])
+
+    # for i in predictions:
+    #     if i[0] != 0:
+    #         word = tokenizer.decode(i[0])
+    #         anm = ANM_CLASSES[i[1]]
+    #         ner = NER_CLASSES[i[2]]
+    #         print('단어: {}, anm: {}, ner: {}'.format(word, anm, ner))
 
     # with torch.no_grad():
     # 어떤 일이 일어나도 절대로 가중치 업데이트는 하지 않는다

@@ -3,7 +3,7 @@ from typing import List, Tuple
 import torch
 from transformers import BertTokenizer
 
-from BERT.classes import ANM_CLASSES, NER_CLASSES
+from BERT.classes import ANM_CLASSES, SOURCE_CLASSES
 from keras.preprocessing.sequence import pad_sequences
 
 
@@ -66,12 +66,12 @@ class TargetsBuilder(TensorBuilder):
         ]
 
         ner_targets = [
-            [NER_CLASSES.index(ner_label) for word, anm_label, ner_label in sentence]
+            [SOURCE_CLASSES.index(ner_label) for word, anm_label, ner_label in sentence]
             for sentence in self.sentences
         ]
 
         anm_targets_p = pad_sequences(anm_targets, maxlen=self.max_len, padding='post', value=ANM_CLASSES.index("O"))
-        ner_targets_p = pad_sequences(ner_targets, maxlen=self.max_len, padding='post', value=NER_CLASSES.index("O"))
+        ner_targets_p = pad_sequences(ner_targets, maxlen=self.max_len, padding='post', value=SOURCE_CLASSES.index("O"))
 
         # (N, 2, L)
         targets = torch.stack([torch.Tensor(anm_targets_p),

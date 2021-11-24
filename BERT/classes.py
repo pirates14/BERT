@@ -5,7 +5,7 @@ ANM_CLASSES = [
     "ANM-I"     # -> 2
 ]
 
-NER_CLASSES = [
+SOURCE_CLASSES = [
     'O',
     'PER-B',
     'PER-I',

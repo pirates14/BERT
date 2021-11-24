@@ -89,7 +89,7 @@ class MultiLabelNER(pl.LightningModule):
 
         self.accuracy.reset()
 
-    def predict(self, inputs: torch.Tensor) -> List[Tuple[str, int, int]]:
+    def predict(self, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         :param inputs: (N, 3, L)
         :return:
@@ -100,14 +100,13 @@ class MultiLabelNER(pl.LightningModule):
         logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
         logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
 
-        logits_1 = torch.softmax(logits_1, 2)
-        logits_2 = torch.softmax(logits_2, 2)
+        probs_1 = torch.softmax(logits_1, 2)  #  -> (N, L, T_1)
+        probs_2 = torch.softmax(logits_2, 2)  #  -> (N, L, T_2)
 
-        label_1 = torch.argmax(logits_1, 2).tolist()
-        label_2 = torch.argmax(logits_2, 2).tolist()
+        labels_1 = torch.argmax(probs_1, 2)  # (N, L, T_1) -> (N, L)
+        labels_2 = torch.argmax(probs_2, 2)  # (N, L, T_2) -> (N, L)
 
-        predictions = list(zip(inputs[:, 0].tolist()[0], label_1[0], label_2[0]))
-        return predictions
+        return labels_1, labels_2
 
     def configure_optimizers(self):
         # 옵티마이저 설정은 여기에서
