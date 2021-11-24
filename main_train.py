@@ -30,7 +30,7 @@ def main():
     # 파라미터를 보고 싶다: ctrl + p
     # 문서를 보고싶다: fn + 1
     trainer = pl.Trainer(max_epochs=config['max_epochs'],
-                         enable_checkpointing=False)
+                         logger=False)
     # 학습을 진행한다
     trainer.fit(model=multi_label_ner, train_dataloader=dataloader)
 

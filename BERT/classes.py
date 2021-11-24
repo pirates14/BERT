@@ -18,5 +18,7 @@ NER_CLASSES = [
     'FLD-B',
     'FLD-I',
     'ETC-B',
-    'ETC-I'
+    'ETC-I',
+    'NUM-B',
+    'NUM-I'
 ]

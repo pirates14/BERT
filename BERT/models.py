@@ -5,9 +5,11 @@ from argparse import Namespace
 
 import torchmetrics
 from torch import nn
-from transformers import BertModel
+from transformers import BertModel, BertTokenizer
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.nn import functional as F
+
+from BERT.tensors import InputsBuilder
 
 
 class MultiLabelNER(pl.LightningModule):
@@ -67,20 +69,44 @@ class MultiLabelNER(pl.LightningModule):
 
     def on_train_epoch_end(self) -> None:
         # TODO: 이걸 왜하는지 주석 달아주세요! (태형님)
+        # reset() : resets internal variables and accumulators
+        """
+        reset()
+
+        We imported necessary classes as Metric, NotComputableError
+        and decorators to adapt the metric for distributed setting. In reset method,
+        we reset internal variables _num_correct and _num_examples which are used to compute the custom metric.
+        In updated method we define how to update the internal variables.
+        And finally in compute method, we compute metric value.
+
+        Notice that _num_correct is a tensor,
+        since in update we accumulate tensor values. _num_examples is a python scalar since we accumulate normal integers.
+        For differentiable metrics, you must detach the accumulated values before adding them to the internal variables.
+        """
+        # 사용자 지정 메트릭을 계산하는 내부 변수 _num_correct 및 _num_예제를 초기화
+        # 업데이트에서 텐서 값을 누적하므로 누적 값을 내부 변수에 추가하기 전에 분리 해야함
+        # 솔직히 무슨소리인지 모르겠음
+
         self.accuracy.reset()
 
-    def predict(self, inputs: torch.Tensor) -> List[List[Tuple[str, int, int]]]:
+    def predict(self, inputs: torch.Tensor) -> List[Tuple[str, int, int]]:
         """
         :param inputs: (N, 3, L)
         :return:
         """
         # TODO: inference 진행하기! (은정님, 태형님)
-        # torch.softmax
-        # torch.argmax
-        # Tensor.tolist()
         H_all = self.forward(inputs)  # (N,3, L) -> (N, L, H)
 
-        predictions = ...
+        logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
+        logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
+
+        logits_1 = torch.softmax(logits_1, 2)
+        logits_2 = torch.softmax(logits_2, 2)
+
+        label_1 = torch.argmax(logits_1, 2).tolist()
+        label_2 = torch.argmax(logits_2, 2).tolist()
+
+        predictions = list(zip(inputs[:, 0].tolist()[0], label_1[0], label_2[0]))
         return predictions
 
     def configure_optimizers(self):
@@ -99,3 +125,4 @@ class MultiLabelNER(pl.LightningModule):
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         pass
+

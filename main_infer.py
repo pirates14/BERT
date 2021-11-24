@@ -4,8 +4,7 @@ e.g. https://github.com/wisdomify/wisdomify/blob/main/main_infer.py
 """
 from typing import List, Tuple
 
-import torch
-from transformers import BertTokenizer, BertModel, AutoConfig, AutoModel
+from transformers import BertTokenizer, AutoConfig, AutoModel
 
 from BERT.loaders import load_config
 from BERT.models import MultiLabelNER
@@ -42,13 +41,17 @@ def main():
     model.eval()
     model.freeze()
 
-    # 원하는 결과?
+    # 원하는 결과
     predictions: List[List[Tuple[str, int, int]]] = model.predict(inputs)
-
-    print(NER_CLASSES[0])  # O
+    for i in predictions:
+        if i[0] != 0:
+            word = tokenizer.decode(i[0])
+            anm = ANM_CLASSES[i[1]]
+            ner = NER_CLASSES[i[2]]
+            print('단어: {}, anm: {}, ner: {}'.format(word, anm, ner))
 
     # with torch.no_grad():
-    #     # 어떤 일이 일어나던 절대로 가중치 업데이트는 하지 않는다
+    # 어떤 일이 일어나도 절대로 가중치 업데이트는 하지 않는다
 
 
 if __name__ == '__main__':
