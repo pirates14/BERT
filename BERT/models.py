@@ -63,6 +63,7 @@ class MultiLabelNER(pl.LightningModule):
 
         # multitask learning
         loss = loss_1 + loss_2
+        self.log("Train/loss", loss)
         return {
             "loss": loss
         }

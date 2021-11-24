@@ -1,8 +1,9 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
-from torch.utils.data import Dataset
+from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
+from torch.utils.data import Dataset, DataLoader
 import torch
-
+from pytorch_lightning import LightningDataModule
 
 class NERDataset(Dataset):
 
@@ -52,3 +53,45 @@ class SentenceGetter(object):
 
 # getter = SentenceGetter(load_petite())
 # sentences = getter.sentences        # list[list[tuple(word,anm,ner)]]
+
+
+class NERDataModule(LightningDataModule):
+
+
+    def __init__(self, config: dict):
+        super().__init__()
+        self.config = config
+
+    def setup(self, stage: Optional[str] = None) -> None:
+        petite = ...
+        # 메모리에서 스플릿을 하는 것도 괜찮다.
+        # TODO: 단, random seed 반드시 고정하기
+        train, val, test = ...
+        train_inputs = ...
+        train_targets = ...
+        test_inputs = ...
+        test_targets = ...
+        val_inputs = ...
+        val_targets = ...
+        self.train_dataset = ...
+        self.test_dataset = ...
+        self.val_dataset = ...
+
+    def train_dataloader(self) -> DataLoader:
+        dataloader = DataLoader(self.train_dataset, batch_size=self.config['batch_size'],
+                                shuffle=True, num_workers=2)
+        return dataloader
+
+    def test_dataloader(self) -> EVAL_DATALOADERS:
+        dataloader = DataLoader(self.val_dataset,
+                                shuffle=False, batch_size=..., num_workers=2)
+        return dataloader
+
+    def val_dataloader(self) -> EVAL_DATALOADERS:
+        dataloader = DataLoader(self.test_dataset,  shuffle=True,
+                                batch_size=..., num_workers=2)
+        return dataloader
+
+    # 무시
+    def predict_dataloader(self) -> EVAL_DATALOADERS:
+        pass
