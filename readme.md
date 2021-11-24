@@ -16,8 +16,8 @@
 
 
 ## 팀
-- 김태희
-- 김태형
-- 이건희
-- 정은정
-- supervised by: 김유빈
+- [김태희](https://github.com/hale-in)
+- [김태형](https://github.com/tae00909)
+- [이건희](https://github.com/ghgh3644)
+- [정은정](https://github.com/eeunn)
+- supervised by: [김유빈](https://github.com/eubinecto)
