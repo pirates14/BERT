@@ -4,6 +4,12 @@ from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADER
 from torch.utils.data import Dataset, DataLoader
 import torch
 from pytorch_lightning import LightningDataModule
+from sklearn.model_selection import train_test_split
+from transformers import BertTokenizer
+
+from BERT.loaders import load_petite, load_config
+from BERT.tensors import InputsBuilder, TargetsBuilder
+
 
 class NERDataset(Dataset):
 
@@ -51,31 +57,36 @@ class SentenceGetter(object):
           # 문장이 없을 때 예외 처리
             return None
 
-# getter = SentenceGetter(load_petite())
-# sentences = getter.sentences        # list[list[tuple(word,anm,ner)]]
-
 
 class NERDataModule(LightningDataModule):
 
-
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, tokenizer):
         super().__init__()
         self.config = config
+        self.tokenizer = tokenizer
 
     def setup(self, stage: Optional[str] = None) -> None:
-        petite = ...
+        petite = load_petite()
+
         # 메모리에서 스플릿을 하는 것도 괜찮다.
         # TODO: 단, random seed 반드시 고정하기
-        train, val, test = ...
-        train_inputs = ...
-        train_targets = ...
-        test_inputs = ...
-        test_targets = ...
-        val_inputs = ...
-        val_targets = ...
-        self.train_dataset = ...
-        self.test_dataset = ...
-        self.val_dataset = ...
+        train, test = train_test_split(petite, test_size=0.2, shuffle=True, random_state=self.config['seed'])
+        train, val = train_test_split(train, test_size=0.2, shuffle=True, random_state=self.config['seed'])
+
+        train = SentenceGetter(train).sentences
+        test = SentenceGetter(test).sentences
+        val = SentenceGetter(val).sentences
+
+        train_inputs = InputsBuilder(self.tokenizer, sentences=train, max_len=self.config['max_length'])
+        train_targets = TargetsBuilder(self.tokenizer, sentences=train, max_len=self.config['max_length'])
+        test_inputs = InputsBuilder(self.tokenizer, sentences=test, max_len=self.config['max_length'])
+        test_targets = TargetsBuilder(self.tokenizer, sentences=test, max_len=self.config['max_length'])
+        val_inputs = InputsBuilder(self.tokenizer, sentences=val, max_len=self.config['max_length'])
+        val_targets = TargetsBuilder(self.tokenizer, sentences=val, max_len=self.config['max_length'])
+
+        self.train_dataset = NERDataset(inputs=train_inputs(), targets=train_targets())
+        self.test_dataset = NERDataset(inputs=test_inputs(), targets=test_targets())
+        self.val_dataset = NERDataset(inputs=val_inputs(), targets=val_targets())
 
     def train_dataloader(self) -> DataLoader:
         dataloader = DataLoader(self.train_dataset, batch_size=self.config['batch_size'],
@@ -84,14 +95,15 @@ class NERDataModule(LightningDataModule):
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
         dataloader = DataLoader(self.val_dataset,
-                                shuffle=False, batch_size=..., num_workers=2)
+                                shuffle=False, batch_size=self.config['batch_size'], num_workers=2)
         return dataloader
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
         dataloader = DataLoader(self.test_dataset,  shuffle=True,
-                                batch_size=..., num_workers=2)
+                                batch_size=self.config['batch_size'], num_workers=2)
         return dataloader
 
     # 무시
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         pass
+

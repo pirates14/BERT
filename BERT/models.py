@@ -5,11 +5,9 @@ from argparse import Namespace
 
 import torchmetrics
 from torch import nn
-from transformers import BertModel, BertTokenizer
+from transformers import BertModel
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.nn import functional as F
-
-from BERT.tensors import InputsBuilder
 
 
 class MultiLabelNER(pl.LightningModule):
@@ -21,7 +19,7 @@ class MultiLabelNER(pl.LightningModule):
         self.bert = bert
         self.W_1 = nn.Linear(self.bert.config.hidden_size, 3)
         self.drop = nn.Dropout(p=0.3)
-        self.W_2 = nn.Linear(self.bert.config.hidden_size, 13)
+        self.W_2 = nn.Linear(self.bert.config.hidden_size, 15)
         self.accuracy = torchmetrics.Accuracy()
         self.save_hyperparameters(Namespace(lr=lr))
 
@@ -69,7 +67,6 @@ class MultiLabelNER(pl.LightningModule):
         }
 
     def on_train_epoch_end(self) -> None:
-        # TODO: 이걸 왜하는지 주석 달아주세요! (태형님)
         # reset() : resets internal variables and accumulators
         """
         reset()
@@ -86,7 +83,6 @@ class MultiLabelNER(pl.LightningModule):
         """
         # 사용자 지정 메트릭을 계산하는 내부 변수 _num_correct 및 _num_예제를 초기화
         # 업데이트에서 텐서 값을 누적하므로 누적 값을 내부 변수에 추가하기 전에 분리 해야함
-        # 솔직히 무슨소리인지 모르겠음
 
         self.accuracy.reset()
 
@@ -95,14 +91,13 @@ class MultiLabelNER(pl.LightningModule):
         :param inputs: (N, 3, L)
         :return:
         """
-        # TODO: inference 진행하기! (은정님, 태형님)
         H_all = self.forward(inputs)  # (N,3, L) -> (N, L, H)
 
         logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
         logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
 
-        probs_1 = torch.softmax(logits_1, 2)  #  -> (N, L, T_1)
-        probs_2 = torch.softmax(logits_2, 2)  #  -> (N, L, T_2)
+        probs_1 = torch.softmax(logits_1, 2)  # -> (N, L, T_1)
+        probs_2 = torch.softmax(logits_2, 2)  # -> (N, L, T_2)
 
         labels_1 = torch.argmax(probs_1, 2)  # (N, L, T_1) -> (N, L)
         labels_2 = torch.argmax(probs_2, 2)  # (N, L, T_2) -> (N, L)

@@ -78,16 +78,3 @@ class TargetsBuilder(TensorBuilder):
                                torch.Tensor(ner_targets_p)], dim=1)
 
         return targets.long()
-
-
-# tokenizer = BertTokenizer.from_pretrained('kykim/bert-kor-base')
-
-# if __name__ == "__main__":
-#     sentences = SentenceGetter(load_petite()).sentences
-#     debug = InputsBuilder(tokenizer=tokenizer, max_len=100, sentences=sentences)
-#     debug.__call__()
-
-# if __name__ == "__main__":
-#     sentences = SentenceGetter(load_petite()).sentences
-#     debug = TargetsBuilder( tokenizer=tokenizer, sentences=sentences, max_len=100)
-#     debug.__call__()

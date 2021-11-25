@@ -50,13 +50,6 @@ def main():
         #  관계자는, B-ANM, B-PERSON
         print(word, ANM_CLASSES[anm_label], SOURCE_CLASSES[source_label])
 
-    # for i in predictions:
-    #     if i[0] != 0:
-    #         word = tokenizer.decode(i[0])
-    #         anm = ANM_CLASSES[i[1]]
-    #         ner = NER_CLASSES[i[2]]
-    #         print('단어: {}, anm: {}, ner: {}'.format(word, anm, ner))
-
     # with torch.no_grad():
     # 어떤 일이 일어나도 절대로 가중치 업데이트는 하지 않는다
 
