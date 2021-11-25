@@ -4,7 +4,7 @@
 
 import pandas as pd
 import yaml
-from BERT.paths import CONFIG_JSON, PETITE_CSV
+from BERT.paths import CONFIG_JSON, DATASET_CSV
 
 
 # exactly the same as:
@@ -14,4 +14,4 @@ def load_config() -> dict:
 
 
 def load_petite() -> pd.DataFrame:
-    return pd.read_csv(PETITE_CSV, encoding='cp949')
+    return pd.read_csv(DATASET_CSV, encoding='cp949')

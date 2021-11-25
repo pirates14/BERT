@@ -4,7 +4,7 @@ import torch
 from transformers import BertTokenizer
 
 from BERT.classes import ANM_CLASSES, SOURCE_CLASSES
-from keras.preprocessing.sequence import pad_sequences
+from keras_preprocessing.sequence import pad_sequences
 
 
 class TensorBuilder:
