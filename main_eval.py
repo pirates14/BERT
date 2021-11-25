@@ -3,6 +3,8 @@ main_eval.py 스크립트는 모델을 평가하기 위한 스크립트입니다
 e.g.: https://github.com/wisdomify/wisdomify/blob/main/main_eval.py
 지표를 계산 (acc, f1_score)
 """
+import pytorch_lightning as pl
+import wandb
 
 
 def main():
@@ -35,7 +37,17 @@ def main():
     # print("F1-Score: {}".format((ner_f1 + anm_f1) / 2))
     #
     # torch.save(nab, 'total_model.tar')
-
+    config = ...
+    with wandb.init(project="BERT") as run:
+        trainer = pl.Trainer(max_epochs=config['max_epochs'],
+                             gpus=torch.cuda.device_count(),  # cpu 밖에 없으면 0, gpu가 n개이면 n
+                             # callbacks=[early_stopping_callback],
+                             enable_checkpointing=False,
+                             logger=logger)
+        # 학습을 진행한다
+        trainer.test(model=..., datamodule=...)
+        # test_step 실행.
+        # TODO: 테스트 데이터에서 정확도 평가를 하는 것도 구현
 
 if __name__ == '__main__':
     main()

@@ -108,6 +108,18 @@ class MultiLabelNER(pl.LightningModule):
         # 옵티마이저 설정은 여기에서
         return torch.optim.AdamW(self.parameters(), lr=self.hparams['lr'])
 
+    def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
+        loss = ...
+        self.log("Validation/loss", loss)
+        return {
+            'loss': loss
+        }
+
+    def test_step(self, *args, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
+        # acc 계산.
+        self.log("Test/...")
+        pass
+
     # boilerplate - 필요는 없는데 구현은 해야해서 그냥 여기에 둠.
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         pass

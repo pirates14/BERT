@@ -49,7 +49,8 @@ def main():
 
     # main_eval.py
     # trainer.test()
-
+    # TODO:  오버피팅이 언제 일어나는지 파악을해서, early stopping 을 해볼 것!
+    # Option: COllab -> Ainize
 
 if __name__ == '__main__':
     main()
