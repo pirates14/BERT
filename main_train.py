@@ -37,6 +37,7 @@ def main():
     logger = WandbLogger(log_model=False)
     with wandb.init(project="BERT") as run:
         trainer = pl.Trainer(max_epochs=config['max_epochs'],
+                             gpus=torch.cuda.device_count(),  # cpu 밖에 없으면 0, gpu가 n개이면 n
                              # callbacks=[early_stopping_callback],
                              enable_checkpointing=False,
                              logger=logger)
