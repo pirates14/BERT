@@ -40,6 +40,7 @@ def main():
         trainer = pl.Trainer(max_epochs=config['max_epochs'],
                              gpus=torch.cuda.device_count(),  # cpu 밖에 없으면 0, gpu가 n개이면 n
                              # callbacks=[early_stopping_callback],
+                             auto_lr_find=True,
                              enable_checkpointing=False,
                              logger=logger)
         # 학습을 진행한다
