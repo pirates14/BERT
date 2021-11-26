@@ -1,6 +1,23 @@
-bert: 'kykim/bert-kor-base'
-max_epochs: 500
-max_length: 200
-lr: 5e-8
-seed: 123
-batch_size: 32
+# 아래는 버전
+test:
+  desc: 완디비에 저장되는지 테스트하기 위한 버전. 그래서 에폭이 2밖에 되지 않음.
+  bert: kykim/bert-kor-base
+  max_epochs: 2
+  max_length: 200
+  lr: 5e-8
+  seed: 123
+  batch_size: 128
+  val_ratio: 0.15
+  test_ratio: 0.15
+  num_workers: 4
+a:
+  desc: 첫번째 버전, 목표는 학습데이터에 오버피팅
+  bert: kykim/bert-kor-base
+  max_epochs: 50
+  max_length: 200
+  lr: 5e-8
+  seed: 123
+  batch_size: 128
+  val_ratio: 0.15
+  test_ratio: 0.15
+  num_workers: 4

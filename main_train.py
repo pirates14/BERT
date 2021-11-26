@@ -2,57 +2,51 @@
 main_train.py은 모델 학습을 진행하는 스크립트입니다.
 e.g. https://github.com/wisdomify/wisdomify/blob/main/main_train.py
 """
-
-import pytorch_lightning as pl
+import random
 import torch
-
 import wandb
+import argparse
+import numpy as np
+import pytorch_lightning as pl
 from transformers import BertTokenizer, BertModel
-from pytorch_lightning.callbacks import EarlyStopping
-from BERT.dataset import NERDataModule
+from BERT.datamodules import AnmSourceNERDataModule
 from BERT.loaders import load_config
-from BERT.models import MultiLabelNER
-from BERT.paths import SOURCE_ANM_NER_CKPT
+from BERT.models import BiLabelNER
+from BERT.labels import ANM_LABELS, SOURCE_LABELS
+from BERT.paths import ARTIFACTS_DIR, bi_label_ner_ckpt
 from pytorch_lightning.loggers import WandbLogger
 
+
 def main():
-    # 1. wandb login
-    # 2. Wandb Logger 만들기
-    # https://wandb.ai/pirates14/BERT
-
-    config = load_config()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("ver", type=str)
+    args = parser.parse_args()
+    config = load_config(args.ver)
+    config.update(vars(args))  # command-line arguments 도 기록하기!
+    # --- fix random seeds -- #
     torch.manual_seed(config['seed'])
-
+    random.seed(config['seed'])
+    np.random.seed(config['seed'])
+    # --- prepare the model and the datamodule --- #
     tokenizer = BertTokenizer.from_pretrained(config['bert'])
     bert = BertModel.from_pretrained(config['bert'])
-    datamodule = NERDataModule(config, tokenizer)
-
-    multi_label_ner = MultiLabelNER(bert=bert, lr=float(config['lr']))
-
-    # 파라미터를 보고 싶다: ctrl + p
-    # 문서를 보고싶다: fn + 1
-
-    # early_stopping_callback = EarlyStopping(monitor="val_loss",
-    #                                         mode="min", patience=2)
-
+    model = BiLabelNER(bert=bert, lr=float(config['lr']), num_labels_pair=(len(ANM_LABELS), len(SOURCE_LABELS)))
+    datamodule = AnmSourceNERDataModule(config, tokenizer)
+    # --- instantiate the trainer  --- #
     logger = WandbLogger(log_model=False)
-    with wandb.init(project="BERT") as run:
+    with wandb.init(project="BERT", config=config) as run:
         trainer = pl.Trainer(max_epochs=config['max_epochs'],
-                             gpus=torch.cuda.device_count(),  # cpu 밖에 없으면 0, gpu가 n개이면 n
-                             # callbacks=[early_stopping_callback],
-                             auto_lr_find=True,
+                             gpus=torch.cuda.device_count(),
                              enable_checkpointing=False,
                              logger=logger)
-        # 학습을 진행한다
-        trainer.fit(model=multi_label_ner, datamodule=datamodule)
+        trainer.fit(model=model, datamodule=datamodule)
+        # --- save the model locally, as push it to wandb as an artifact --- #
+        model_path = bi_label_ner_ckpt(config['ver'])
+        trainer.save_checkpoint(model_path)
+        artifact = wandb.Artifact(name=model.name, type="model", metadata=config)
+        artifact.add_file(model_path)
+        run.log_artifact(artifact, aliases=["latest", config['ver']])
 
-    # 모델학습이 진행이된다.
-    trainer.save_checkpoint(filepath=SOURCE_ANM_NER_CKPT)
-
-    # main_eval.py
-    # trainer.test()
-    # TODO:  오버피팅이 언제 일어나는지 파악을해서, early stopping 을 해볼 것!
-    # Option: COllab -> Ainize
 
 if __name__ == '__main__':
     main()
