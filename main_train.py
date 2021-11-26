@@ -36,6 +36,7 @@ def main():
     logger = WandbLogger(log_model=False)
     with wandb.init(project="BERT", config=config) as run:
         trainer = pl.Trainer(max_epochs=config['max_epochs'],
+                             log_every_n_steps=config['log_every_n_steps'],
                              gpus=torch.cuda.device_count(),
                              enable_checkpointing=False,
                              logger=logger)

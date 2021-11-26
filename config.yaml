@@ -10,6 +10,7 @@ test:
   val_ratio: 0.15
   test_ratio: 0.15
   num_workers: 4
+  log_every_n_steps: 2
 a:
   desc: 첫번째 버전, 목표는 학습데이터에 오버피팅
   bert: kykim/bert-kor-base
@@ -21,3 +22,4 @@ a:
   val_ratio: 0.15
   test_ratio: 0.15
   num_workers: 4
+  log_every_n_steps: 2
