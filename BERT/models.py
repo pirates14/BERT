@@ -122,7 +122,7 @@ class MultiLabelNER(pl.LightningModule):
             'loss': loss
         }
 
-    def test_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
+    def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], batch_idx) -> dict:
         # todo: acc 계산.
         inputs, targets = batch  # (N, L, 3), (N, L, 2)
         H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
