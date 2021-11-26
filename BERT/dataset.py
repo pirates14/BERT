@@ -5,9 +5,8 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import train_test_split
-from transformers import BertTokenizer
 
-from BERT.loaders import load_petite, load_config
+from BERT.loaders import load_data, load_config
 from BERT.tensors import InputsBuilder, TargetsBuilder
 
 
@@ -66,10 +65,9 @@ class NERDataModule(LightningDataModule):
         self.tokenizer = tokenizer
 
     def setup(self, stage: Optional[str] = None) -> None:
-        petite = load_petite()
+        petite = load_data()
 
         # 메모리에서 스플릿을 하는 것도 괜찮다.
-        # TODO: 단, random seed 반드시 고정하기
         train, test = train_test_split(petite, test_size=0.2, shuffle=True, random_state=self.config['seed'])
         train, val = train_test_split(train, test_size=0.2, shuffle=True, random_state=self.config['seed'])
 

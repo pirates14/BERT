@@ -7,6 +7,7 @@ from BERT.classes import ANM_CLASSES, SOURCE_CLASSES
 from keras_preprocessing.sequence import pad_sequences
 
 
+
 class TensorBuilder:
     """
     Whatever a tensor builder does, it outputs a tensor
@@ -61,20 +62,20 @@ class TargetsBuilder(TensorBuilder):
 
         # type : list of list of int
         anm_targets = [
-            [ANM_CLASSES.index(anm_label) for word, anm_label, ner_label in sentence]
+            [ANM_CLASSES.index(anm_label) for word, anm_label, source_label in sentence]
             for sentence in self.sentences
         ]
 
-        ner_targets = [
-            [SOURCE_CLASSES.index(ner_label) for word, anm_label, ner_label in sentence]
+        source_targets = [
+            [SOURCE_CLASSES.index(source_label) for word, anm_label, source_label in sentence]
             for sentence in self.sentences
         ]
 
         anm_targets_p = pad_sequences(anm_targets, maxlen=self.max_len, padding='post', value=ANM_CLASSES.index("O"))
-        ner_targets_p = pad_sequences(ner_targets, maxlen=self.max_len, padding='post', value=SOURCE_CLASSES.index("O"))
+        source_targets_p = pad_sequences(source_targets, maxlen=self.max_len, padding='post', value=SOURCE_CLASSES.index("O"))
 
         # (N, 2, L)
         targets = torch.stack([torch.Tensor(anm_targets_p),
-                               torch.Tensor(ner_targets_p)], dim=1)
+                               torch.Tensor(source_targets_p)], dim=1)
 
         return targets.long()

@@ -5,6 +5,8 @@ e.g. https://github.com/wisdomify/wisdomify/blob/main/main_train.py
 
 import pytorch_lightning as pl
 import torch
+
+import main_eval
 import wandb
 from transformers import BertTokenizer, BertModel
 from pytorch_lightning.callbacks import EarlyStopping
@@ -15,7 +17,6 @@ from BERT.paths import SOURCE_ANM_NER_CKPT
 from pytorch_lightning.loggers import WandbLogger
 
 def main():
-    # TODO: 시드 고정
     # 1. wandb login
     # 2. Wandb Logger 만들기
     # https://wandb.ai/pirates14/BERT
@@ -31,6 +32,7 @@ def main():
 
     # 파라미터를 보고 싶다: ctrl + p
     # 문서를 보고싶다: fn + 1
+
     # early_stopping_callback = EarlyStopping(monitor="val_loss",
     #                                         mode="min", patience=2)
 
