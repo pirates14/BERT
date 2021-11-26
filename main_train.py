@@ -6,7 +6,6 @@ e.g. https://github.com/wisdomify/wisdomify/blob/main/main_train.py
 import pytorch_lightning as pl
 import torch
 
-import main_eval
 import wandb
 from transformers import BertTokenizer, BertModel
 from pytorch_lightning.callbacks import EarlyStopping

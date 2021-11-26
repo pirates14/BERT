@@ -2,5 +2,6 @@
 
 /lightning_logs
 
-/data
+/data/source_anm_ner.ckpt
 
+/wandb
