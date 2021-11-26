@@ -33,8 +33,5 @@ def main():
         trainer.test(model=multi_label_ner, datamodule=datamodule)
         # test_step 실행.
 
-        # TODO: 테스트 데이터에서 정확도 평가를 하는 것도 구현
-
-
 if __name__ == '__main__':
     main()

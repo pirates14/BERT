@@ -155,8 +155,7 @@ class MultiLabelNER(pl.LightningModule):
         self.test_acc_1.update(logits_1, labels_1)
         self.test_acc_2.update(logits_2, labels_2)
 
-    def on_test_end(self) -> None:
-        # TODO: accuracy logging 하기.
+    def on_test_epoch_end(self) -> None:
         acc_1 = self.test_acc_1.compute()
         acc_2 = self.test_acc_2.compute()
         self.test_acc_1.reset()
