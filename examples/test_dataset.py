@@ -1,15 +1,14 @@
 from torch.utils.data import Dataset
 import torch
 
-class NerDataset(Dataset):
 
-    def __init__(self, sentences, vals, avals, tokenizer, max_len):
+class NERDataset(Dataset):
+
+    def __init__(self, sentences, vals, tokenizer, max_len):
         # 문장
         self.sentences = sentences
         # NER(tag)
         self.vals = vals
-        # ANM
-        self.avals = avals
         # 토크나이저
         self.tokenizer = tokenizer
         # 최대 길이
@@ -21,29 +20,25 @@ class NerDataset(Dataset):
         s = self.sentences[idx].split(" ")
         # 그 문장에 맞는 tag를 가져옴
         v = self.vals[idx]
-        av = self.avals[idx]
-        d = {'input_ids': [], 'attention_mask': [], 'labels': [], 'alabels': []}
+        d = {'input_ids': [], 'attention_mask': [], 'labels': []}
         # 리스트안에 인코딩된 값들이 각각 들어간다.
-        text, labels, alabels, mask = [], [], [], []
+        text, labels, mask = [], [], []
         for w in range(len(s)):
             # 0 부터 len(s)까지 각 단어를 토큰화
-            i, l, al = self.align_labels(self.tokenizer, s[w], v[w], av[w])
+            i, l = self.align_labels(self.tokenizer, s[w], v[w])
             text.extend(i['input_ids'])
             labels.extend(l)
             mask.extend(i['attention_mask'])
-            alabels.extend(al)
         # 문장 앞뒤에 [101], [102] 추가
         d['input_ids'] = [101] + self.pad(text + [102], self.max_len)
         # tag 앞뒤에 [0], [1] 추가
         d['labels'] = [0] + self.pad(labels + [0], self.max_len)
-        d['alabels'] = [0] + self.pad(alabels + [0], self.max_len)
         # mask 앞뒤에 1 추가
         d['attention_mask'] = [1] + self.pad(mask + [1], self.max_len)
 
         # tensor
         d['input_ids'] = torch.tensor(d['input_ids'])
         d['labels'] = torch.tensor(d['labels'])
-        d['alabels'] = torch.tensor(d['alabels'])
         d['attention_mask'] = torch.tensor(d['attention_mask'])
 
         return d
@@ -51,18 +46,16 @@ class NerDataset(Dataset):
     def __len__(self):
         return len(self.sentences)
 
-    def align_labels(self, tokenizer, word, label, alabel):
+    def align_labels(self, tokenizer, word, label):
         # 각 단어를 토큰화
         word = tokenizer(word, add_special_tokens=False)
         labels = []
-        alabels = []
         # 워드서브 일때
         # '안녕' -> '안', '##녕'
         # 이에 맞는 라벨 값이 각각 들어가야함
         for i in range(len(word['input_ids'])):
             labels.append(label)
-            alabels.append(alabel)
-        return word, labels, alabels
+        return word, labels
 
     # 정해준 길이 만큼 pad 추가
     def pad(self, s, max_len):

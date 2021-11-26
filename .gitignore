@@ -1,1 +1,7 @@
 /venv
+
+/lightning_logs
+
+/data/source_anm_ner.ckpt
+
+/wandb

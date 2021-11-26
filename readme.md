@@ -14,6 +14,22 @@
 
 빌 코바치&톰 로젠스틸,『저널리즘의 기본 원칙(The elements of journalism)』, 한국언론진흥재단(2014), p145-147, p151, p169-171
 
+### Quickstart
+
+모델 학습:
+```shell
+python3 main_train.py 
+```
+
+모델 평가:
+```shell
+python3 main_eval.py
+```
+
+결과 예측:
+```shell
+python3 main_infer.py
+```
 
 ## 팀
 - [김태희](https://github.com/hale-in)
