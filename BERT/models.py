@@ -14,10 +14,16 @@ class MonoLabelNER(pl.LightningModule):
     # ignored
     name: str = "mono_label_ner"
 
-    def __init__(self, bert: BertModel, lr: float, num_labels: int):
+    def __init__(self, lr: float, num_labels: int, hidden_size: int, bert: BertModel = None):
+        """
+        :param lr:
+        :param num_labels:
+        :param hidden_size:
+        :param bert: 이 부분이 None 이 될수 있도록 해야 BiLabelNER 의 구성폼으로 사용가능
+        """
         super().__init__()
         self.bert = bert
-        self.W = nn.Linear(self.bert.config.hidden_size, num_labels)
+        self.W = nn.Linear(hidden_size, num_labels)
         self.train_acc = torchmetrics.Accuracy()
         self.val_acc = torchmetrics.Accuracy()
         self.test_acc = torchmetrics.Accuracy()
@@ -127,8 +133,8 @@ class BiLabelNER(pl.LightningModule):
     def __init__(self, bert: BertModel, lr: float, num_labels_pair: Tuple[int, int]):
         super().__init__()
         self.bert = bert
-        self.mono_1 = MonoLabelNER(bert, lr=lr, num_labels=num_labels_pair[0])
-        self.mono_2 = MonoLabelNER(bert, lr=lr, num_labels=num_labels_pair[1])
+        self.mono_1 = MonoLabelNER(lr=lr, num_labels=num_labels_pair[0], hidden_size=bert.config.hidden_size)
+        self.mono_2 = MonoLabelNER(lr=lr, num_labels=num_labels_pair[1], hidden_size=bert.config.hidden_size)
         self.save_hyperparameters(Namespace(lr=lr, num_labels_pair=num_labels_pair))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
