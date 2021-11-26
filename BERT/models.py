@@ -9,6 +9,7 @@ from transformers import BertModel, BertTokenizer
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.nn import functional as F
 
+
 class MultiLabelNER(pl.LightningModule):
     """
     글자당 여러개의 개체명을 인식하는 모델.
@@ -53,9 +54,9 @@ class MultiLabelNER(pl.LightningModule):
 
         # 정확도 계산
         acc1 = self.accuracy(logits_1, labels_1)
-        self.log("anm_acc", acc1, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_anm_acc", acc1, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         acc2 = self.accuracy(logits_2, labels_2)
-        self.log("ner_acc", acc2, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_ner_acc", acc2, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
         # multitask learning
         loss = loss_1 + loss_2
@@ -89,8 +90,42 @@ class MultiLabelNER(pl.LightningModule):
         # 옵티마이저 설정은 여기에서
         return torch.optim.AdamW(self.parameters(), lr=self.hparams['lr'])
 
-    def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], batch_idx) -> dict:
+    def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], batch_ids) -> dict:
         # todo: val
+        inputs, targets = batch  # (N, L, 3), (N, L, 2)
+        H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
+
+        logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
+        logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
+
+        logits_1 = torch.einsum("nlc->ncl", logits_1)    # (N, L, T_1) -> (N, T_1, L)
+        logits_2 = torch.einsum("nlc->ncl", logits_2)    # (N, L, T_2) -> (N, T_2, L)
+
+        labels_1 = targets[:, 0]  # (N, 2, L) -> (N, L)
+        labels_2 = targets[:, 1]  # (N, 2, L) -> (N, L)
+
+        loss_1 = F.cross_entropy(logits_1, labels_1)    # (N, T_1, L), (N, L) -> (N, L)
+        loss_2 = F.cross_entropy(logits_2, labels_2)    # (N, T_2, L), (N, L) -> (N, L)
+
+        loss_1 = loss_1.sum()   # (N, L) -> 1
+        loss_2 = loss_2.sum()   # (N, L) -> 1
+
+        # 정확도 계산
+        acc1 = self.accuracy(logits_1, labels_1)
+        self.log("val_anm_acc", acc1, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        acc2 = self.accuracy(logits_2, labels_2)
+        self.log("val_ner_acc", acc2, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
+        # multitask learning
+        loss = loss_1 + loss_2
+        self.log("Validation/loss", loss)
+        return {
+            'loss': loss
+        }
+
+    def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], batch_ids) -> dict:
+        # todo: acc 계산.
+
         inputs, targets = batch  # (N, L, 3), (N, L, 2)
         H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
 
@@ -117,33 +152,8 @@ class MultiLabelNER(pl.LightningModule):
 
         # multitask learning
         loss = loss_1 + loss_2
-        self.log("Validation/loss", loss)
-        return {
-            'loss': loss
-        }
-
-    def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], batch_idx) -> dict:
-        # todo: acc 계산.
-        inputs, targets = batch  # (N, L, 3), (N, L, 2)
-        H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
-
-        logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
-        logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
-
-        logits_1 = torch.einsum("nlc->ncl", logits_1)    # (N, L, T_1) -> (N, T_1, L)
-        logits_2 = torch.einsum("nlc->ncl", logits_2)    # (N, L, T_2) -> (N, T_2, L)
-
-        labels_1 = targets[:, 0]  # (N, 2, L) -> (N, L)
-        labels_2 = targets[:, 1]  # (N, 2, L) -> (N, L)
-
-        # 정확도 계산
-        acc1 = self.accuracy(logits_1, labels_1)
-        self.log("anm_acc", acc1, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        acc2 = self.accuracy(logits_2, labels_2)
-        self.log("ner_acc", acc2, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-
-        # multitask learning
         acc = (acc1+acc2) / 2
+        self.log('test/loss', loss)
         self.log("test/acc", acc)
         return {
             'acc': acc
@@ -161,4 +171,3 @@ class MultiLabelNER(pl.LightningModule):
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         pass
-
