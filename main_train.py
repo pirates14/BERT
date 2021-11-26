@@ -33,8 +33,8 @@ def main():
     model = BiLabelNER(bert=bert, lr=float(config['lr']), num_labels_pair=(len(ANM_LABELS), len(SOURCE_LABELS)))
     datamodule = AnmSourceNERDataModule(config, tokenizer)
     # --- instantiate the trainer  --- #
-    logger = WandbLogger(log_model=False)
     with wandb.init(project="BERT", config=config) as run:
+        logger = WandbLogger(log_model=False)
         trainer = pl.Trainer(max_epochs=config['max_epochs'],
                              log_every_n_steps=config['log_every_n_steps'],
                              gpus=torch.cuda.device_count(),

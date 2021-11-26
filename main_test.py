@@ -31,8 +31,8 @@ def main():
     bert = BertModel.from_pretrained(config['bert'])
     datamodule = AnmSourceNERDataModule(config, tokenizer)
     multi_label_ner = BiLabelNER(bert=bert, lr=float(config['lr']))
-    logger = WandbLogger(log_model=False)
     with wandb.init(project="BERT") as run:
+        logger = WandbLogger(log_model=False)
         trainer = pl.Trainer(max_epochs=config['max_epochs'],
                              gpus=torch.cuda.device_count(),  # cpu 밖에 없으면 0, gpu가 n개이면 n
                              # callbacks=[early_stopping_callback],

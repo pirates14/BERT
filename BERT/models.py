@@ -12,6 +12,8 @@ from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADER
 class MonoLabelNER(pl.LightningModule):
     # TODO: 레이블을 하나만 예측하는 모델도 구현하기
     # ignored
+    name: str = "mono_label_ner"
+
     def __init__(self, bert: BertModel, lr: float, num_labels: int):
         super().__init__()
         self.bert = bert
@@ -20,13 +22,6 @@ class MonoLabelNER(pl.LightningModule):
         self.val_acc = torchmetrics.Accuracy()
         self.test_acc = torchmetrics.Accuracy()
         self.save_hyperparameters(Namespace(lr=lr, num_labels=num_labels))
-
-    @property
-    def name(self):
-        """
-        wandb artifact 이름
-        """
-        return "mono_label_ner"
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         input_ids = inputs[:, 0]  # (N, 3, L) -> (N, L)
@@ -127,6 +122,7 @@ class BiLabelNER(pl.LightningModule):
     """
     글자당 두개의 레이블을 동시에 에측하는 모델.
     """
+    name: str = "bi_label_ner"
 
     def __init__(self, bert: BertModel, lr: float, num_labels_pair: Tuple[int, int]):
         super().__init__()
@@ -134,13 +130,6 @@ class BiLabelNER(pl.LightningModule):
         self.mono_1 = MonoLabelNER(bert, lr=lr, num_labels=num_labels_pair[0])
         self.mono_2 = MonoLabelNER(bert, lr=lr, num_labels=num_labels_pair[1])
         self.save_hyperparameters(Namespace(lr=lr, num_labels_pair=num_labels_pair))
-
-    @property
-    def name(self):
-        """
-        wandb artifact 이름
-        """
-        return "bi_label_ner"
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         input_ids = inputs[:, 0]  # (N, 3, L) -> (N, L)
