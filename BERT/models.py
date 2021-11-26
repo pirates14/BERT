@@ -77,13 +77,12 @@ class MonoLabelNER(pl.LightningModule):
         _, targets = batch
         loss = outputs["loss"]
         logits = outputs["logits"]
-        self.train_acc.update(logits, targets)
+        acc = self.train_acc(logits, targets)
         self.log("Train/loss", loss)
+        self.log("Train/acc", acc)
 
     def on_train_epoch_end(self) -> None:
-        acc = self.train_acc.compute()
         self.train_acc.reset()
-        self.log("Train/acc", acc)
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
         return self.training_step(batch)
@@ -92,13 +91,12 @@ class MonoLabelNER(pl.LightningModule):
         _, targets = batch
         loss = outputs["loss"]
         logits = outputs["logits"]
-        self.val_acc.update(logits, targets)
+        acc = self.val_acc(logits, targets)
         self.log("Validation/loss", loss)
+        self.log("Validation/acc", acc)
 
     def on_validation_epoch_end(self) -> None:
-        acc = self.val_acc.compute()
         self.val_acc.reset()
-        self.log("Validation/acc", acc)
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
         return self.training_step(batch)
@@ -106,11 +104,11 @@ class MonoLabelNER(pl.LightningModule):
     def on_test_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args):
         _, targets = batch
         logits = outputs["logits"]
-        self.test_acc.update(logits, targets)
+        acc = self.test_acc(logits, targets)
+        self.log("Test/acc", acc)
 
     def on_test_epoch_end(self):
-        acc = self.test_acc.compute()
-        self.log("Test/acc", acc)
+        self.test_acc.reset()
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         pass
@@ -181,42 +179,36 @@ class BiLabelNER(pl.LightningModule):
 
     def on_train_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args) -> None:
         _, targets = batch
-        self.mono_1.train_acc.update(outputs["logits_1"], targets[:, 0])
-        self.mono_2.train_acc.update(outputs["logits_2"], targets[:, 1])
+        acc_1 = self.mono_1.train_acc(outputs["logits_1"], targets[:, 0])
+        acc_2 = self.mono_2.train_acc(outputs["logits_2"], targets[:, 1])
         self.log("Train/loss", outputs['loss'])  # 로스는 각 배치별로 로깅
-
-    def on_train_epoch_end(self) -> None:
-        acc_1 = self.mono_1.train_acc.compute()
-        acc_2 = self.mono_2.train_acc.compute()
-        self.mono_1.train_acc.reset()
-        self.mono_2.train_acc.reset()
-        # 각종 지표는 에폭의 끝에서 로깅
         self.log("Train/acc_1", acc_1)
         self.log("Train/acc_2", acc_2)
         acc_all = (self.mono_1.train_acc.correct + self.mono_2.train_acc.correct) \
             / (self.mono_1.train_acc.total + self.mono_2.train_acc.total)
         self.log("Train/acc_all", acc_all)
 
+    def on_train_epoch_end(self) -> None:
+        self.mono_1.train_acc.reset()
+        self.mono_2.train_acc.reset()
+
     def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
         return self.training_step(batch)
 
     def on_validation_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args) -> None:
         _, targets = batch
-        self.mono_1.val_acc.update(outputs["logits_1"], targets[:, 0])
-        self.mono_2.val_acc.update(outputs["logits_2"], targets[:, 1])
+        acc_1 = self.mono_1.val_acc(outputs["logits_1"], targets[:, 0])
+        acc_2 = self.mono_2.val_acc(outputs["logits_2"], targets[:, 1])
         self.log("Validation/loss", outputs['loss'])  # 로스는 각 배치별로 로깅
-
-    def on_validation_epoch_end(self) -> None:
-        acc_1 = self.mono_1.val_acc.compute()
-        acc_2 = self.mono_2.val_acc.compute()
-        self.mono_1.val_acc.reset()
-        self.mono_2.val_acc.reset()
-        # 각종 지표는 에폭의 끝에서 로깅
         self.log("Validation/acc_1", acc_1)
         self.log("Validation/acc_2", acc_2)
         acc_all = (self.mono_1.val_acc.correct + self.mono_2.val_acc.correct) \
             / (self.mono_1.val_acc.total + self.mono_2.val_acc.total)
         self.log("Validation/acc_all", acc_all)
+
+    def on_validation_epoch_end(self) -> None:
+        self.mono_1.val_acc.reset()
+        self.mono_2.val_acc.reset()
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
         return self.training_step(batch)
@@ -225,20 +217,17 @@ class BiLabelNER(pl.LightningModule):
         _, targets = batch
         logits_1 = outputs["logits_1"]
         logits_2 = outputs["logits_2"]
-        self.test_acc.update(logits_1, targets[:, 0])
-        self.test_acc.update(logits_2, targets[:, 1])
-
-    def on_test_epoch_end(self) -> None:
-        acc_1 = self.mono_1.test_acc.compute()
-        acc_2 = self.mono_2.test_acc.compute()
-        self.mono_1.test_acc.reset()
-        self.mono_2.test_acc.reset()
-        # 각종 지표는 에폭의 끝에서 로깅
+        acc_1 = self.test_acc.update(logits_1, targets[:, 0])
+        acc_2 = self.test_acc.update(logits_2, targets[:, 1])
         self.log("Test/acc_1", acc_1)
         self.log("Test/acc_2", acc_2)
         acc_all = (self.mono_1.test_acc.correct + self.mono_2.test_acc.correct) \
             / (self.mono_1.test_acc.total + self.mono_2.test_acc.val_acc.total)
         self.log("Test/acc_all", acc_all)
+
+    def on_test_epoch_end(self) -> None:
+        self.mono_1.test_acc.reset()
+        self.mono_2.test_acc.reset()
 
     # boilerplate - 필요는 없는데 구현은 해야해서 그냥 여기에 둠.
     def train_dataloader(self) -> TRAIN_DATALOADERS:
