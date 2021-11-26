@@ -13,5 +13,5 @@ def load_config() -> dict:
         return yaml.safe_load(fh)
 
 
-def load_data() -> pd.DataFrame:
+def load_dataset() -> pd.DataFrame:
     return pd.read_csv(DATASET_CSV, encoding='cp949')

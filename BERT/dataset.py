@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import Dataset, DataLoader
@@ -6,7 +6,7 @@ import torch
 from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import train_test_split
 
-from BERT.loaders import load_data, load_config
+from BERT.loaders import load_dataset, load_config
 from BERT.tensors import InputsBuilder, TargetsBuilder
 
 
@@ -35,7 +35,6 @@ class SentenceGetter(object):
 
         data['Sentence #'] = data['Sentence #'].fillna(method='ffill')
         data.dropna(axis=0, inplace=True)
-
         # w(word), p(pos),t(tag) 튜플로
         agg_func = lambda s: [(w, p, t) for w, p, t in zip(s["Word"].values.tolist(),
                                                            s["ANM"].values.tolist(),
@@ -45,16 +44,15 @@ class SentenceGetter(object):
         # 위 시리즈 -> 리스트
         self.sentences = [s for s in self.grouped]
 
-    # 다음 문장을 뽑는다.
-    def get_next(self):
-        try:
-            s = self.grouped["Sentence: {}".format(self.n_sent)]
-            self.n_sent += 1
-            return s
-
-        except:
-          # 문장이 없을 때 예외 처리
-            return None
+    # # 다음 문장을 뽑는다.
+    # def get_next(self) -> List[Tuple[str, str, str]]:
+    #     try:
+    #         s = self.grouped["Sentence: {}".format(self.n_sent)]
+    #         self.n_sent += 1
+    #         return s
+    #     except:
+    #       # 문장이 없을 때 예외 처리
+    #         return None
 
 
 class NERDataModule(LightningDataModule):
@@ -65,7 +63,7 @@ class NERDataModule(LightningDataModule):
         self.tokenizer = tokenizer
 
     def setup(self, stage: Optional[str] = None) -> None:
-        petite = load_data()
+        petite = load_dataset()
 
         # 메모리에서 스플릿을 하는 것도 괜찮다.
         train, test = train_test_split(petite, test_size=0.2, shuffle=True, random_state=self.config['seed'])

@@ -28,7 +28,6 @@ class InputsBuilder(TensorBuilder):
             [word for word, _, _ in sentence]
             for sentence in self.sentences
         ]
-
         encoded = [self.tokenizer.convert_tokens_to_ids(tokens) for tokens in sent2tokens]
         input_ids = torch.LongTensor(pad_sequences(encoded, maxlen=self.max_len, dtype=int,
                                                    padding="post", value=self.tokenizer.pad_token_id)) # 패딩 토큰을 토크나이저에서 가져오기
