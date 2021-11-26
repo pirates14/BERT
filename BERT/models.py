@@ -90,7 +90,7 @@ class MultiLabelNER(pl.LightningModule):
         # 옵티마이저 설정은 여기에서
         return torch.optim.AdamW(self.parameters(), lr=self.hparams['lr'])
 
-    def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], batch_idx) -> dict:
+    def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
         # todo: val
         inputs, targets = batch  # (N, L, 3), (N, L, 2)
         H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
@@ -123,7 +123,7 @@ class MultiLabelNER(pl.LightningModule):
             'loss': loss
         }
 
-    def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], batch_idx) -> dict:
+    def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
         # todo: acc 계산.
 
         inputs, targets = batch  # (N, L, 3), (N, L, 2)
