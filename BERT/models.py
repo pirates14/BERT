@@ -173,9 +173,9 @@ class BiLabelNER(pl.LightningModule):
         self.log("Train/loss", outputs['loss'], on_step=True)  # 로스는 각 배치별로 로깅
         self.log("Train/acc_1", acc_1, on_step=True)
         self.log("Train/acc_2", acc_2, on_step=True)
-        acc_all = (self.mono_1.train_acc.correct + self.mono_2.train_acc.correct) \
-            / (self.mono_1.train_acc.total + self.mono_2.train_acc.total)
-        self.log("Train/acc_all", acc_all, on_step=True)
+        # acc_all = (self.mono_1.train_acc.correct + self.mono_2.train_acc.correct) \
+        #     / (self.mono_1.train_acc.total + self.mono_2.train_acc.total)
+        # self.log("Train/acc_all", acc_all, on_step=True)
 
     def on_train_epoch_end(self) -> None:
         self.mono_1.train_acc.reset()
@@ -191,9 +191,9 @@ class BiLabelNER(pl.LightningModule):
         self.log("Validation/loss", outputs['loss'], on_step=True)  # 로스는 각 배치별로 로깅
         self.log("Validation/acc_1", acc_1, on_step=True)
         self.log("Validation/acc_2", acc_2, on_step=True)
-        acc_all = (self.mono_1.val_acc.correct + self.mono_2.val_acc.correct) \
-            / (self.mono_1.val_acc.total + self.mono_2.val_acc.total)
-        self.log("Validation/acc_all", acc_all)
+        # acc_all = (self.mono_1.val_acc.correct + self.mono_2.val_acc.correct) \
+        #     / (self.mono_1.val_acc.total + self.mono_2.val_acc.total)
+        # self.log("Validation/acc_all", acc_all)
 
     def on_validation_epoch_end(self) -> None:
         self.mono_1.val_acc.reset()
@@ -210,9 +210,9 @@ class BiLabelNER(pl.LightningModule):
         acc_2 = self.test_acc.update(logits_2, targets[:, 1])
         self.log("Test/acc_1", acc_1, on_step=True)
         self.log("Test/acc_2", acc_2, on_step=True)
-        acc_all = (self.mono_1.test_acc.correct + self.mono_2.test_acc.correct) \
-            / (self.mono_1.test_acc.total + self.mono_2.test_acc.val_acc.total)
-        self.log("Test/acc_all", acc_all, on_step=True)
+        # acc_all = (self.mono_1.test_acc.correct + self.mono_2.test_acc.correct) \
+        #     / (self.mono_1.test_acc.total + self.mono_2.test_acc.val_acc.total)
+        # self.log("Test/acc_all", acc_all, on_step=True)
 
     def on_test_epoch_end(self) -> None:
         self.mono_1.test_acc.reset()
