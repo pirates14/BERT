@@ -50,7 +50,7 @@ def main():
             model_path = bi_label_ner_ckpt(config['ver'])
             trainer.save_checkpoint(model_path)
             artifact = wandb.Artifact(name=model.name, type="model", metadata=config)
-            artifact.add_file(model_path)
+            artifact.add_file(model_path, "ner.ckpt")
             run.log_artifact(artifact, aliases=["latest", config['ver']])
 
 
