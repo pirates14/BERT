@@ -1,6 +1,6 @@
 bert: 'kykim/bert-kor-base'
 max_epochs: 500
-max_length: 100
-lr: 5e-10
+max_length: 300
+lr: 5e-8
 seed: 123
 batch_size: 128

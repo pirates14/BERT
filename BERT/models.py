@@ -20,11 +20,12 @@ class MultiLabelNER(pl.LightningModule):
         self.W_1 = nn.Linear(self.bert.config.hidden_size, 3)
         self.drop = nn.Dropout(p=0.3)
         self.W_2 = nn.Linear(self.bert.config.hidden_size, 15)
-        # TODO: 정확도를 따로 관리하기
         self.train_acc_1 = torchmetrics.Accuracy()
         self.train_acc_2 = torchmetrics.Accuracy()
         self.val_acc_1 = torchmetrics.Accuracy()
         self.val_acc_2 = torchmetrics.Accuracy()
+        self.test_acc_1 = torchmetrics.Accuracy()
+        self.test_acc_2 = torchmetrics.Accuracy()
         self.save_hyperparameters(Namespace(lr=lr))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -68,7 +69,6 @@ class MultiLabelNER(pl.LightningModule):
         }
 
     def on_train_epoch_end(self) -> None:
-        # TODO: 대응되는 accuracy 리셋하기
         acc_1 = self.train_acc_1.compute()
         acc_2 = self.train_acc_2.compute()
         self.train_acc_1.reset()
@@ -99,7 +99,6 @@ class MultiLabelNER(pl.LightningModule):
         return torch.optim.AdamW(self.parameters(), lr=self.hparams['lr'])
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
-        # todo: val
         inputs, targets = batch  # (N, L, 3), (N, L, 2)
         H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
 
@@ -119,9 +118,9 @@ class MultiLabelNER(pl.LightningModule):
         loss_2 = loss_2.sum()   # (N, L) -> 1
 
         # 정확도 계산
-        # TODO: val_acc.update()
-        acc1 = self.accuracy(logits_1, labels_1)
-        acc2 = self.accuracy(logits_2, labels_2)
+        self.val_acc_1.update(logits_1, labels_1)
+        self.val_acc_2.update(logits_2, labels_2)
+
         # multitask learning
         loss = loss_1 + loss_2
         self.log("Validation/loss", loss)
@@ -130,14 +129,14 @@ class MultiLabelNER(pl.LightningModule):
         }
 
     def on_validation_epoch_end(self) -> None:
-        # TODO: acc.compute() 후
-        # 로깅하기
-        pass
-
+        acc_1 = self.val_acc_1.compute()
+        acc_2 = self.val_acc_2.compute()
+        self.val_acc_1.reset()
+        self.val_acc_2.reset()
+        self.log("Validation/acc_1", acc_1)
+        self.log("Validation/acc_2", acc_2)
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
-        # todo: acc 계산.
-
         inputs, targets = batch  # (N, L, 3), (N, L, 2)
         H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
 
@@ -151,16 +150,19 @@ class MultiLabelNER(pl.LightningModule):
         labels_2 = targets[:, 1]  # (N, 2, L) -> (N, L)
 
         # 정확도 계산
-        # 궁금한거:
-        # probs =
         # https://torchmetrics.readthedocs.io/en/latest/references/modules.html#id3
         # probs/logits 다 상관없음.
-        acc1 = self.accuracy(logits_1, labels_1)
-        acc2 = self.accuracy(logits_2, labels_2)
+        self.test_acc_1.update(logits_1, labels_1)
+        self.test_acc_2.update(logits_2, labels_2)
 
     def on_test_end(self) -> None:
         # TODO: accuracy logging 하기.
-        pass
+        acc_1 = self.test_acc_1.compute()
+        acc_2 = self.test_acc_2.compute()
+        self.test_acc_1.reset()
+        self.test_acc_2.reset()
+        self.log("Test/acc_1", acc_1)
+        self.log("Test/acc_2", acc_2)
 
     # boilerplate - 필요는 없는데 구현은 해야해서 그냥 여기에 둠.
     def train_dataloader(self) -> TRAIN_DATALOADERS:
