@@ -13,7 +13,7 @@ from BERT.datamodules import AnmSourceNERDataModule
 from BERT.loaders import load_config
 from BERT.models import BiLabelNER
 from BERT.labels import ANM_LABELS, SOURCE_LABELS
-from BERT.paths import ARTIFACTS_DIR, bi_label_ner_ckpt
+from BERT.paths import bi_label_ner_ckpt
 from pytorch_lightning.loggers import WandbLogger
 
 
@@ -40,13 +40,18 @@ def main():
                              gpus=torch.cuda.device_count(),
                              enable_checkpointing=False,
                              logger=logger)
-        trainer.fit(model=model, datamodule=datamodule)
-        # --- save the model locally, as push it to wandb as an artifact --- #
-        model_path = bi_label_ner_ckpt(config['ver'])
-        trainer.save_checkpoint(model_path)
-        artifact = wandb.Artifact(name=model.name, type="model", metadata=config)
-        artifact.add_file(model_path)
-        run.log_artifact(artifact, aliases=["latest", config['ver']])
+        try:
+            trainer.fit(model=model, datamodule=datamodule)
+        except Exception as e:
+            raise e
+        else:
+            # --- save the model locally, as push it to wandb as an artifact --- #
+            # 오류 없이 학습이 완료되었을 때만 모델을 저장하기!
+            model_path = bi_label_ner_ckpt(config['ver'])
+            trainer.save_checkpoint(model_path)
+            artifact = wandb.Artifact(name=model.name, type="model", metadata=config)
+            artifact.add_file(model_path)
+            run.log_artifact(artifact, aliases=["latest", config['ver']])
 
 
 if __name__ == '__main__':

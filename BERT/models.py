@@ -73,8 +73,8 @@ class MonoLabelNER(pl.LightningModule):
         loss = outputs["loss"]
         logits = outputs["logits"]
         acc = self.train_acc(logits, targets)
-        self.log("Train/loss", loss)
-        self.log("Train/acc", acc)
+        self.log("Train/loss", loss, on_step=True)
+        self.log("Train/acc", acc, on_step=True)
 
     def on_train_epoch_end(self) -> None:
         self.train_acc.reset()
@@ -87,8 +87,8 @@ class MonoLabelNER(pl.LightningModule):
         loss = outputs["loss"]
         logits = outputs["logits"]
         acc = self.val_acc(logits, targets)
-        self.log("Validation/loss", loss)
-        self.log("Validation/acc", acc)
+        self.log("Validation/loss", loss, on_step=True)
+        self.log("Validation/acc", acc, on_step=True)
 
     def on_validation_epoch_end(self) -> None:
         self.val_acc.reset()
@@ -100,7 +100,7 @@ class MonoLabelNER(pl.LightningModule):
         _, targets = batch
         logits = outputs["logits"]
         acc = self.test_acc(logits, targets)
-        self.log("Test/acc", acc)
+        self.log("Test/acc", acc, on_step=True)
 
     def on_test_epoch_end(self):
         self.test_acc.reset()
@@ -170,12 +170,12 @@ class BiLabelNER(pl.LightningModule):
         _, targets = batch
         acc_1 = self.mono_1.train_acc(outputs["logits_1"], targets[:, 0])
         acc_2 = self.mono_2.train_acc(outputs["logits_2"], targets[:, 1])
-        self.log("Train/loss", outputs['loss'])  # 로스는 각 배치별로 로깅
-        self.log("Train/acc_1", acc_1)
-        self.log("Train/acc_2", acc_2)
+        self.log("Train/loss", outputs['loss'], on_step=True)  # 로스는 각 배치별로 로깅
+        self.log("Train/acc_1", acc_1, on_step=True)
+        self.log("Train/acc_2", acc_2, on_step=True)
         acc_all = (self.mono_1.train_acc.correct + self.mono_2.train_acc.correct) \
             / (self.mono_1.train_acc.total + self.mono_2.train_acc.total)
-        self.log("Train/acc_all", acc_all)
+        self.log("Train/acc_all", acc_all, on_step=True)
 
     def on_train_epoch_end(self) -> None:
         self.mono_1.train_acc.reset()
@@ -188,9 +188,9 @@ class BiLabelNER(pl.LightningModule):
         _, targets = batch
         acc_1 = self.mono_1.val_acc(outputs["logits_1"], targets[:, 0])
         acc_2 = self.mono_2.val_acc(outputs["logits_2"], targets[:, 1])
-        self.log("Validation/loss", outputs['loss'])  # 로스는 각 배치별로 로깅
-        self.log("Validation/acc_1", acc_1)
-        self.log("Validation/acc_2", acc_2)
+        self.log("Validation/loss", outputs['loss'], on_step=True)  # 로스는 각 배치별로 로깅
+        self.log("Validation/acc_1", acc_1, on_step=True)
+        self.log("Validation/acc_2", acc_2, on_step=True)
         acc_all = (self.mono_1.val_acc.correct + self.mono_2.val_acc.correct) \
             / (self.mono_1.val_acc.total + self.mono_2.val_acc.total)
         self.log("Validation/acc_all", acc_all)
@@ -208,11 +208,11 @@ class BiLabelNER(pl.LightningModule):
         logits_2 = outputs["logits_2"]
         acc_1 = self.test_acc.update(logits_1, targets[:, 0])
         acc_2 = self.test_acc.update(logits_2, targets[:, 1])
-        self.log("Test/acc_1", acc_1)
-        self.log("Test/acc_2", acc_2)
+        self.log("Test/acc_1", acc_1, on_step=True)
+        self.log("Test/acc_2", acc_2, on_step=True)
         acc_all = (self.mono_1.test_acc.correct + self.mono_2.test_acc.correct) \
             / (self.mono_1.test_acc.total + self.mono_2.test_acc.val_acc.total)
-        self.log("Test/acc_all", acc_all)
+        self.log("Test/acc_all", acc_all, on_step=True)
 
     def on_test_epoch_end(self) -> None:
         self.mono_1.test_acc.reset()

@@ -1,5 +1,6 @@
 from pathlib import Path
 from os import path
+from os import makedirs
 from BERT.models import BiLabelNER, MonoLabelNER
 # directories
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -11,8 +12,12 @@ DATASET_CSV = path.join(ROOT_DIR, "dataset.csv")  # 학습데이터
 
 # 모델 체크포인트 저장 paths
 def bi_label_ner_ckpt(ver: str) -> str:
-    return path.join(ARTIFACTS_DIR, f"{BiLabelNER.name}:{ver}")
+    model_path = path.join(ARTIFACTS_DIR, f"{BiLabelNER.name}:{ver}")
+    makedirs(model_path, exist_ok=True)
+    return model_path
 
 
 def mono_label_ner_ckpt(ver: str) -> str:
-    return path.join(ARTIFACTS_DIR, f"{MonoLabelNER.name}:{ver}")
+    model_path = path.join(ARTIFACTS_DIR, f"{MonoLabelNER.name}:{ver}")
+    makedirs(model_path, exist_ok=True)
+    return model_path
