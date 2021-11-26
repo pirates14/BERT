@@ -17,7 +17,7 @@ from BERT.labels import SOURCE_LABELS, ANM_LABELS
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("ver", type=str)
+    parser.add_argument("--ver", type=str, default="test")
     parser.add_argument("--text", type=str, default="삼성전자 관계자는 “코로나19 방역 지침에 따라 행사를 조용하게 치렀다”고 밝혔다")
     args = parser.parse_args()
     config = load_config(args.ver)
@@ -30,6 +30,7 @@ def main():
     bert = AutoModel.from_config(AutoConfig.from_pretrained(config['bert']))
 
     with wandb.init(project="BERT", config=config) as run:
+        # download a pre-trained model from wandb
         model_path = run.use_artifact(f"{BiLabelNER.name}:{config['ver']}")
         model = BiLabelNER.load_from_checkpoint(model_path, bert=bert)
         tokens: List[str] = tokenizer.tokenize(config)
