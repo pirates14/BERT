@@ -19,7 +19,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ver", type=str, default="test")
+    parser.add_argument("--ver", type=str, default="overfit")
     args = parser.parse_args()
     config = load_config(args.ver)
     config.update(vars(args))  # command-line arguments 도 기록하기!
