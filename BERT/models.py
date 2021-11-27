@@ -45,9 +45,9 @@ class MonoLabelNER(pl.LightningModule):
         :return:
         """
         H_all = self.forward(inputs)
-        return self.predict_forward_given(H_all)
+        return self.predict_given_forward(H_all)
 
-    def predict_forward_given(self, H_all: torch.Tensor):
+    def predict_given_forward(self, H_all: torch.Tensor):
         logits = self.W(H_all)  # (N, L, H) -> (N, L, T)
         probs = torch.softmax(logits, -1)  # -> (N, L, T)
         labels = torch.argmax(probs, -1)  # (N, L, T) -> (N, L)
@@ -62,9 +62,9 @@ class MonoLabelNER(pl.LightningModule):
         # H_all = H_all[:, 1:]  # (N, L, H) -> (N, L-1, H)
         # H_all 로 부터 각 레이블에 해당하는 로짓값을 구하기
         H_all = self.forward(inputs)
-        return self.training_step_forward_given(H_all, self.attention_mask, targets)
+        return self.training_step_given_forward(H_all, self.attention_mask, targets)
 
-    def training_step_forward_given(self, H_all: torch.Tensor,
+    def training_step_given_forward(self, H_all: torch.Tensor,
                                     attention_mask: torch.Tensor, targets: torch.Tensor) -> dict:
         logits = self.W(H_all)  # (N, L, H) -> (N, L, T)
         logits = torch.einsum("nlc->ncl", logits)  # (N, L, T_1) -> (N, T_1, L)
@@ -157,8 +157,8 @@ class BiLabelNER(pl.LightningModule):
         :return:
         """
         H_all = self.forward(inputs)
-        labels_1 = self.mono_1.predict_forward_given(H_all)  # (N, 3, L) -> (N, L)
-        labels_2 = self.mono_2.predict_forward_given(H_all)  # (N, 3, L) -> (N, L)
+        labels_1 = self.mono_1.predict_given_forward(H_all)  # (N, 3, L) -> (N, L)
+        labels_2 = self.mono_2.predict_given_forward(H_all)  # (N, 3, L) -> (N, L)
         return labels_1, labels_2
 
     def configure_optimizers(self):
@@ -168,8 +168,8 @@ class BiLabelNER(pl.LightningModule):
     def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
         inputs, targets = batch
         H_all = self.forward(inputs)
-        outputs_1 = self.mono_1.training_step_forward_given(H_all, self.attention_mask, targets[:, 0])
-        outputs_2 = self.mono_2.training_step_forward_given(H_all, self.attention_mask, targets[:, 1])
+        outputs_1 = self.mono_1.training_step_given_forward(H_all, self.attention_mask, targets[:, 0])
+        outputs_2 = self.mono_2.training_step_given_forward(H_all, self.attention_mask, targets[:, 1])
         loss = outputs_1["loss"] + outputs_2["loss"]  # unweighted multi-task learning
         return {
             "loss": loss,

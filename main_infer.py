@@ -40,12 +40,14 @@ def main():
         inputs = InputsBuilder(tokenizer, sentences, config['max_length'])()
         model.freeze()
         # 원하는 결과
-        anm_labels, source_labels = model.predict(inputs)  # (N, 3, L) -> (1, L), (1, L)
+        anm_labels, source_labels = model.predict(inputs)  # (N
+        input_ids = inputs[:, 0].squeeze()   # (N, 3, L) -> (1, L) -> (L)
         anm_labels = anm_labels.squeeze()  # (1, L) -> (L,)
         source_labels = source_labels.squeeze()  # (1, L) -> (L,)
-        for word, anm_label, source_label in zip(tokens, anm_labels, source_labels):
+        assert input_ids.shape[0] == anm_labels.shape[0] == source_labels.shape[0]
+        for input_id, anm_label, source_label in zip(input_ids, anm_labels, source_labels):
             #  관계자는, B-ANM, B-PERSON
-            print(word, ANM_LABELS[anm_label], SOURCE_LABELS[source_label])
+            print(tokenizer.decode(input_id), ANM_LABELS[anm_label], SOURCE_LABELS[source_label])
 
 
 if __name__ == '__main__':
