@@ -47,7 +47,7 @@ def main():
         else:
             # --- save the model locally, as push it to wandb as an artifact --- #
             # 오류 없이 학습이 완료되었을 때만 모델을 저장하기!
-            model_path = bi_label_ner_ckpt(config['ver'])
+            model_path = bi_label_ner_ckpt()
             trainer.save_checkpoint(model_path)
             artifact = wandb.Artifact(name=model.name, type="model", metadata=config)
             artifact.add_file(model_path, "ner.ckpt")

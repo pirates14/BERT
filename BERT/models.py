@@ -212,17 +212,20 @@ class BiLabelNER(pl.LightningModule):
         _, targets = batch
         logits_1 = outputs["logits_1"]
         logits_2 = outputs["logits_2"]
-        acc_1 = self.test_acc.update(logits_1, targets[:, 0])
-        acc_2 = self.test_acc.update(logits_2, targets[:, 1])
-        self.log("Test/acc_1", acc_1, on_step=True)
-        self.log("Test/acc_2", acc_2, on_step=True)
+        self.mono_1.test_acc.update(logits_1, targets[:, 0])
+        self.mono_2.test_acc.update(logits_2, targets[:, 1])
+
         # acc_all = (self.mono_1.test_acc.correct + self.mono_2.test_acc.correct) \
         #     / (self.mono_1.test_acc.total + self.mono_2.test_acc.val_acc.total)
         # self.log("Test/acc_all", acc_all, on_step=True)
 
     def on_test_epoch_end(self) -> None:
+        acc_1 = self.mono_1.test_acc.compute()
+        acc_2 = self.mono_2.test_acc.compute()
         self.mono_1.test_acc.reset()
         self.mono_2.test_acc.reset()
+        self.log("Test/acc_1", acc_1, on_epoch=True)
+        self.log("Test/acc_2", acc_2, on_epoch=True)
 
     # boilerplate - 필요는 없는데 구현은 해야해서 그냥 여기에 둠.
     def train_dataloader(self) -> TRAIN_DATALOADERS:

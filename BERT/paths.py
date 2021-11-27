@@ -11,13 +11,13 @@ DATASET_CSV = path.join(ROOT_DIR, "dataset.csv")  # 학습데이터
 
 
 # 모델 체크포인트 저장 paths
-def bi_label_ner_ckpt(ver: str) -> str:
-    artifact_path = path.join(ARTIFACTS_DIR, f"{BiLabelNER.name}:{ver}")
+def bi_label_ner_ckpt() -> str:
+    artifact_path = path.join(ARTIFACTS_DIR, BiLabelNER.name)
     makedirs(artifact_path, exist_ok=True)
     return path.join(artifact_path, "ner.ckpt")
 
 
-def mono_label_ner_ckpt(ver: str) -> str:
-    artifact_path = path.join(ARTIFACTS_DIR, f"{MonoLabelNER.name}:{ver}")
+def mono_label_ner_ckpt() -> str:
+    artifact_path = path.join(ARTIFACTS_DIR, MonoLabelNER.name)
     makedirs(artifact_path, exist_ok=True)
     return path.join(artifact_path, "ner.ckpt")

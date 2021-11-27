@@ -3,6 +3,8 @@ main_eval.py 스크립트는 모델을 평가하기 위한 스크립트입니다
 e.g.: https://github.com/wisdomify/wisdomify/blob/main/main_eval.py
 지표를 계산 (acc, f1_score)
 """
+from os import path
+
 import torch
 import wandb
 import argparse
@@ -10,15 +12,16 @@ import random
 import numpy as np
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
-from transformers import BertTokenizer, BertModel
+from transformers import BertTokenizer, AutoModel, AutoConfig
 from BERT.datamodules import AnmSourceNERDataModule
 from BERT.loaders import load_config
 from BERT.models import BiLabelNER
 
 
 def main():
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("ver", type=str)
+    parser.add_argument("--ver", type=str, default="test")
     args = parser.parse_args()
     config = load_config(args.ver)
     config.update(vars(args))  # command-line arguments 도 기록하기!
@@ -28,18 +31,19 @@ def main():
     np.random.seed(config['seed'])
 
     tokenizer = BertTokenizer.from_pretrained(config['bert'])
-    bert = BertModel.from_pretrained(config['bert'])
+    bert = AutoModel.from_config(AutoConfig.from_pretrained(config['bert']))
     datamodule = AnmSourceNERDataModule(config, tokenizer)
-    multi_label_ner = BiLabelNER(bert=bert, lr=float(config['lr']))
-    with wandb.init(project="BERT") as run:
+    with wandb.init(project="BERT", config=config) as run:
+        # download a pre-trained model from wandb
         logger = WandbLogger(log_model=False)
-        trainer = pl.Trainer(max_epochs=config['max_epochs'],
-                             gpus=torch.cuda.device_count(),  # cpu 밖에 없으면 0, gpu가 n개이면 n
-                             # callbacks=[early_stopping_callback],
+        artifact = run.use_artifact(f"{BiLabelNER.name}:{config['ver']}")
+        model_path = artifact.checkout()
+        model = BiLabelNER.load_from_checkpoint(path.join(model_path, "ner.ckpt"), bert=bert)
+        # test_step 실행.
+        trainer = pl.Trainer(gpus=torch.cuda.device_count(),
                              enable_checkpointing=False,
                              logger=logger)
-        trainer.test(model=multi_label_ner, datamodule=datamodule)
-        # test_step 실행.
+        trainer.test(model, datamodule)
 
 
 if __name__ == '__main__':
