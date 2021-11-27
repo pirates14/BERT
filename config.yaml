@@ -4,7 +4,7 @@ test:
   bert: kykim/bert-kor-base
   max_epochs: 2
   max_length: 200
-  lr: 5e-8
+  lr: 0.00001
   seed: 123
   batch_size: 32
   val_ratio: 0.15
@@ -16,7 +16,7 @@ overfit:
   bert: kykim/bert-kor-base
   max_epochs: 10
   max_length: 200
-  lr: 5e-8
+  lr: 0.00001
   seed: 123
   batch_size: 32
   val_ratio: 0.15
