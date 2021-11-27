@@ -2,12 +2,13 @@
 main_infer.py는 모델의 예측값을 정성적으로 살펴보기 위한 스크립트입니다.
 e.g. https://github.com/wisdomify/wisdomify/blob/main/main_infer.py
 """
-from typing import List, Tuple
 import argparse
 import torch
 import random
-import numpy as np
 import wandb
+import numpy as np
+from os import path
+from typing import List, Tuple
 from transformers import BertTokenizer, AutoConfig, AutoModel
 from BERT.loaders import load_config
 from BERT.models import BiLabelNER
@@ -31,9 +32,10 @@ def main():
 
     with wandb.init(project="BERT", config=config) as run:
         # download a pre-trained model from wandb
-        model_path = run.use_artifact(f"{BiLabelNER.name}:{config['ver']}")
-        model = BiLabelNER.load_from_checkpoint(model_path, bert=bert)
-        tokens: List[str] = tokenizer.tokenize(config)
+        artifact = run.use_artifact(f"{BiLabelNER.name}:{config['ver']}")
+        model_path = artifact.checkout()
+        model = BiLabelNER.load_from_checkpoint(path.join(model_path, "ner.ckpt"), bert=bert)
+        tokens: List[str] = tokenizer.tokenize(config['text'])
         sentences: List[List[Tuple[str, str, str]]] = [[(token, "", "") for token in tokens]]
         inputs = InputsBuilder(tokenizer, sentences, config['max_length'])()
         model.freeze()
