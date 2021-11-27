@@ -18,8 +18,8 @@ from BERT.labels import SOURCE_LABELS, ANM_LABELS
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ver", type=str, default="test")
-    parser.add_argument("--text", type=str, default="삼성전자 관계자는 “코로나19 방역 지침에 따라 행사를 조용하게 치렀다”고 밝혔다")
+    parser.add_argument("--ver", type=str, default="overfit")
+    parser.add_argument("--text", type=str, default="[CLS] 폴리티코는 소식통 3명을 인용해 바이든 당선인이 미 육군에서 흑인 최초 기록을 여러 차례 세운 오스틴을 국방장관에 지명할 예정이라고 전했다 [SEP]")
     args = parser.parse_args()
     config = load_config(args.ver)
     config.update(vars(args))  # command-line arguments 도 기록하기!

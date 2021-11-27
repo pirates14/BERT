@@ -1,7 +1,7 @@
 import torch
 import torchmetrics
 from torch import nn
-from typing import Tuple
+from typing import Tuple, Optional
 import pytorch_lightning as pl
 from torch.nn import functional as F
 from argparse import Namespace
@@ -27,15 +27,16 @@ class MonoLabelNER(pl.LightningModule):
         self.train_acc = torchmetrics.Accuracy()
         self.val_acc = torchmetrics.Accuracy()
         self.test_acc = torchmetrics.Accuracy()
+        self.attention_mask: Optional[torch.Tensor] = None
         self.save_hyperparameters(Namespace(lr=lr, num_labels=num_labels))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         input_ids = inputs[:, 0]  # (N, 3, L) -> (N, L)
         token_type_ids = inputs[:, 1]  # (N, 3, L) -> (N, L)
-        attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
+        self.attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
         H_all = self.bert(input_ids=input_ids,
                           token_type_ids=token_type_ids,
-                          attention_mask=attention_mask)[0]  # (N, L, H)
+                          attention_mask=self.attention_mask)[0]  # (N, L, H)
         return H_all
 
     def predict(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -61,12 +62,15 @@ class MonoLabelNER(pl.LightningModule):
         # H_all = H_all[:, 1:]  # (N, L, H) -> (N, L-1, H)
         # H_all 로 부터 각 레이블에 해당하는 로짓값을 구하기
         H_all = self.forward(inputs)
-        return self.training_step_forward_given(H_all, targets)
+        return self.training_step_forward_given(H_all, self.attention_mask, targets)
 
-    def training_step_forward_given(self, H_all: torch.Tensor, targets: torch.Tensor) -> dict:
+    def training_step_forward_given(self, H_all: torch.Tensor,
+                                    attention_mask: torch.Tensor, targets: torch.Tensor) -> dict:
         logits = self.W(H_all)  # (N, L, H) -> (N, L, T)
         logits = torch.einsum("nlc->ncl", logits)  # (N, L, T_1) -> (N, T_1, L)
-        loss = F.cross_entropy(logits, targets).sum()  # (N, T_1, L), (N, L) -> (N, L) -> ()
+        loss = F.cross_entropy(logits, targets)  # (N, T_1, L), (N, L) -> (N, L)
+        loss = torch.masked_fill(loss, mask=attention_mask == 0, value=0)
+        loss = loss.sum()
         # 정확도 계산 - 배치의 accuracy 수집
         return {
             "loss": loss,
@@ -135,15 +139,16 @@ class BiLabelNER(pl.LightningModule):
         self.bert = bert
         self.mono_1 = MonoLabelNER(lr=lr, num_labels=num_labels_pair[0], hidden_size=bert.config.hidden_size)
         self.mono_2 = MonoLabelNER(lr=lr, num_labels=num_labels_pair[1], hidden_size=bert.config.hidden_size)
+        self.attention_mask: Optional[torch.Tensor] = None
         self.save_hyperparameters(Namespace(lr=lr, num_labels_pair=num_labels_pair))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         input_ids = inputs[:, 0]  # (N, 3, L) -> (N, L)
         token_type_ids = inputs[:, 1]  # (N, 3, L) -> (N, L)
-        attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
+        self.attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
         H_all = self.bert(input_ids=input_ids,
                           token_type_ids=token_type_ids,
-                          attention_mask=attention_mask)[0]  # (N, L, H)
+                          attention_mask=self.attention_mask)[0]  # (N, L, H)
         return H_all
 
     def predict(self, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -163,8 +168,8 @@ class BiLabelNER(pl.LightningModule):
     def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
         inputs, targets = batch
         H_all = self.forward(inputs)
-        outputs_1 = self.mono_1.training_step_forward_given(H_all, targets[:, 0])
-        outputs_2 = self.mono_2.training_step_forward_given(H_all, targets[:, 1])
+        outputs_1 = self.mono_1.training_step_forward_given(H_all, self.attention_mask, targets[:, 0])
+        outputs_2 = self.mono_2.training_step_forward_given(H_all, self.attention_mask, targets[:, 1])
         loss = outputs_1["loss"] + outputs_2["loss"]  # unweighted multi-task learning
         return {
             "loss": loss,
