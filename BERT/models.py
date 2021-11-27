@@ -193,13 +193,13 @@ class BiLabelNER(pl.LightningModule):
         _, targets = batch
         f1_1 = self.mono_1.train_f1(outputs["logits_1"], targets[:, 0])
         f1_2 = self.mono_2.train_f1(outputs["logits_2"], targets[:, 1])
-        acc_1 = self.mono_1.train_acc(outputs["logits_1"], targets[:, 0])
-        acc_2 = self.mono_2.train_acc(outputs["logits_2"], targets[:, 1])
+        # acc_1 = self.mono_1.train_acc(outputs["logits_1"], targets[:, 0])
+        # acc_2 = self.mono_2.train_acc(outputs["logits_2"], targets[:, 1])
         self.log("Train/loss", outputs['loss'], on_step=True)  # 로스는 각 배치별로 로깅
         self.log("Train/f1_1", f1_1, on_step=True)
         self.log("Train/f1_2", f1_2, on_step=True)
-        self.log("Train/acc_1", acc_1, on_step=True)
-        self.log("Train/acc_2", acc_2, on_step=True)
+        # self.log("Train/acc_1", acc_1, on_step=True)
+        # self.log("Train/acc_2", acc_2, on_step=True)
         # acc_all = (self.mono_1.train_acc.correct + self.mono_2.train_acc.correct) \
         #     / (self.mono_1.train_acc.total + self.mono_2.train_acc.total)
         # self.log("Train/acc_all", acc_all, on_step=True)
@@ -207,8 +207,8 @@ class BiLabelNER(pl.LightningModule):
     def on_train_epoch_end(self) -> None:
         self.mono_1.train_f1.reset()
         self.mono_2.train_f1.reset()
-        self.mono_1.train_acc.reset()
-        self.mono_2.train_acc.reset()
+        # self.mono_1.train_acc.reset()
+        # self.mono_2.train_acc.reset()
 
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
@@ -218,13 +218,13 @@ class BiLabelNER(pl.LightningModule):
         _, targets = batch
         f1_1 = self.mono_1.val_f1(outputs["logits_1"], targets[:, 0])
         f1_2 = self.mono_2.val_f1(outputs["logits_2"], targets[:, 1])
-        acc_1 = self.mono_1.val_acc(outputs["logits_1"], targets[:, 0])
-        acc_2 = self.mono_2.val_acc(outputs["logits_2"], targets[:, 1])
+        # acc_1 = self.mono_1.val_acc(outputs["logits_1"], targets[:, 0])
+        # acc_2 = self.mono_2.val_acc(outputs["logits_2"], targets[:, 1])
         self.log("Validation/loss", outputs['loss'], on_step=True)  # 로스는 각 배치별로 로깅
         self.log("Validation/f1_1", f1_1, on_step=True)
         self.log("Validation/f1_2", f1_2, on_step=True)
-        self.log("Validation/acc_1", acc_1, on_step=True)
-        self.log("Validation/acc_2", acc_2, on_step=True)
+        # self.log("Validation/acc_1", acc_1, on_step=True)
+        # self.log("Validation/acc_2", acc_2, on_step=True)
         # acc_all = (self.mono_1.val_acc.correct + self.mono_2.val_acc.correct) \
         #     / (self.mono_1.val_acc.total + self.mono_2.val_acc.total)
         # self.log("Validation/acc_all", acc_all)
@@ -232,8 +232,8 @@ class BiLabelNER(pl.LightningModule):
     def on_validation_epoch_end(self) -> None:
         self.mono_1.val_f1.reset()
         self.mono_2.val_f1.reset()
-        self.mono_1.val_acc.reset()
-        self.mono_2.val_acc.reset()
+        # self.mono_1.val_acc.reset()
+        # self.mono_2.val_acc.reset()
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
         return self.training_step(batch)
@@ -244,8 +244,8 @@ class BiLabelNER(pl.LightningModule):
         logits_2 = outputs["logits_2"]
         self.mono_1.test_f1.update(logits_1, targets[:, 0])
         self.mono_2.test_f1.update(logits_2, targets[:, 1])
-        self.mono_1.test_acc.update(logits_1, targets[:, 0])
-        self.mono_2.test_acc.update(logits_2, targets[:, 1])
+        # self.mono_1.test_acc.update(logits_1, targets[:, 0])
+        # self.mono_2.test_acc.update(logits_2, targets[:, 1])
 
         # acc_all = (self.mono_1.test_acc.correct + self.mono_2.test_acc.correct) \
         #     / (self.mono_1.test_acc.total + self.mono_2.test_acc.val_acc.total)
@@ -254,16 +254,16 @@ class BiLabelNER(pl.LightningModule):
     def on_test_epoch_end(self) -> None:
         f1_1 = self.mono_1.test_f1.compute()
         f1_2 = self.mono_2.test_f1.compute()
-        acc_1 = self.mono_1.test_acc.compute()
-        acc_2 = self.mono_2.test_acc.compute()
+        # acc_1 = self.mono_1.test_acc.compute()
+        # acc_2 = self.mono_2.test_acc.compute()
         self.mono_1.test_f1.reset()
         self.mono_2.test_f1.reset()
-        self.mono_1.test_acc.reset()
-        self.mono_2.test_acc.reset()
+        # self.mono_1.test_acc.reset()
+        # self.mono_2.test_acc.reset()
         self.log("Test/f1_1", f1_1, on_epoch=True)
         self.log("Test/f1_2", f1_2, on_epoch=True)
-        self.log("Test/acc_1", acc_1, on_epoch=True)
-        self.log("Test/acc_2", acc_2, on_epoch=True)
+        # self.log("Test/acc_1", acc_1, on_epoch=True)
+        # self.log("Test/acc_2", acc_2, on_epoch=True)
 
     # boilerplate - 필요는 없는데 구현은 해야해서 그냥 여기에 둠.
     def train_dataloader(self) -> TRAIN_DATALOADERS:
