@@ -19,10 +19,12 @@ from pytorch_lightning.loggers import WandbLogger
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ver", type=str, default="overfit")
+    parser.add_argument("--model", type=str, default="mono")
+    parser.add_argument("--ver", type=str, default="test_anm")
     args = parser.parse_args()
-    config = load_config(args.ver)
-    config.update(vars(args))  # command-line arguments 도 기록하기!
+    config = load_config(args.model, args.ver)
+    # command-line arguments 도 기록하기!
+    config.update(vars(args))
     # --- fix random seeds -- #
     torch.manual_seed(config['seed'])
     random.seed(config['seed'])
@@ -30,18 +32,23 @@ def main():
     # --- prepare the model and the datamodule --- #
     tokenizer = BertTokenizer.from_pretrained(config['bert'])
     bert = BertModel.from_pretrained(config['bert'])
-
-    if int(input('label_num : ')) == 3:
-        model = MonoLabelNER(bert=bert, lr=float(config['lr']), num_labels=len(ANM_LABELS),
-                             hidden_size=bert.config.hidden_size)
-        datamodule = AnmDataNERModule(config, tokenizer)
-    elif int(input('label_num : ')) == 15:
-        model = MonoLabelNER(bert=bert, lr=float(config['lr']), num_labels=len(SOURCE_LABELS),
-                             hidden_size=bert.config.hidden_size)
-        datamodule = SourceNERDataModule(config, tokenizer)
-    else:
+    # input은 쓰지 말기
+    if config['model'] == "bi":
         model = BiLabelNER(bert=bert, lr=float(config['lr']), num_labels_pair=(len(ANM_LABELS), len(SOURCE_LABELS)))
         datamodule = AnmSourceNERDataModule(config, tokenizer)
+    elif config['model'] == "mono":
+        if config['label_type'] == "anm":
+            model = MonoLabelNER(bert=bert, lr=float(config['lr']), num_labels=len(ANM_LABELS),
+                                 hidden_size=bert.config.hidden_size)
+            datamodule = AnmDataNERModule(config, tokenizer)
+        elif config['label_type'] == "source":
+            model = MonoLabelNER(bert=bert, lr=float(config['lr']), num_labels=len(SOURCE_LABELS),
+                                 hidden_size=bert.config.hidden_size)
+            datamodule = SourceNERDataModule(config, tokenizer)
+        else:
+            raise ValueError(f"Invalid label_type: {config['label_type']}")
+    else:
+        raise ValueError(f"Invalid model: {config['model']}")
 
     # --- instantiate the trainer  --- #
     with wandb.init(project="BERT", config=config) as run:

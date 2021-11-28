@@ -7,9 +7,9 @@ from BERT.paths import CONFIG_JSON, DATASET_CSV
 
 
 # exactly the same as
-def load_config(ver: str) -> dict:
+def load_config(model: str, ver: str) -> dict:
     with open(CONFIG_JSON, encoding="utf-8") as fh:
-        return yaml.safe_load(fh)[ver]
+        return yaml.safe_load(fh)[model][ver]
 
 
 # load the dataset to train a model
