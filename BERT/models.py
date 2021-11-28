@@ -10,6 +10,7 @@ from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADER
 
 
 class MonoLabelNER(pl.LightningModule):
+    # artifact 의 이름을 여기에 정의하기.
     name: str = "mono_label_ner"
 
     def __init__(self, lr: float, num_labels: int, hidden_size: int, bert: BertModel = None):
@@ -150,7 +151,6 @@ class BiLabelNER(pl.LightningModule):
     def __init__(self, bert: BertModel, lr: float, num_labels_pair: Tuple[int, int]):
         super().__init__()
         self.bert = bert
-        self.bilstm = nn.LSTM(bert.config.hidden_size, bidirectional=True, hidden_size=bert.config.hidden_size// 2, batch_first=True)
         self.mono_1 = MonoLabelNER(lr=lr, num_labels=num_labels_pair[0], hidden_size=bert.config.hidden_size)
         self.mono_2 = MonoLabelNER(lr=lr, num_labels=num_labels_pair[1], hidden_size=bert.config.hidden_size)
         self.attention_mask: Optional[torch.Tensor] = None
@@ -163,8 +163,7 @@ class BiLabelNER(pl.LightningModule):
         H_all = self.bert(input_ids=input_ids,
                           token_type_ids=token_type_ids,
                           attention_mask=self.attention_mask)[0]  # (N, L, H)
-        hidden_states, _ = self.bilstm(H_all)
-        return hidden_states
+        return H_all
 
     def predict(self, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -279,3 +278,17 @@ class BiLabelNER(pl.LightningModule):
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         pass
+
+
+class BiLabelNERWithBiLSTM(BiLabelNER):
+
+    name: str = "bi_label_ner_with_bilstm"
+
+    def __init__(self, bert: BertModel, lr: float, num_labels_pair: Tuple[int, int]):
+        super().__init__(bert, lr, num_labels_pair)
+        self.bilstm = nn.LSTM(bert.config.hidden_size, bidirectional=True, hidden_size=bert.config.hidden_size// 2, batch_first=True)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        H_all = super(BiLabelNERWithBiLSTM, self).forward(inputs)
+        hidden_states, _ = self.bilstm(H_all)
+        return hidden_states

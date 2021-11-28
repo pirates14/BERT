@@ -1,5 +1,5 @@
 # 아래는 버전
-mono:
+mono_label_ner:
   test_anm:
     desc: 익명 취재원 개체명 인식
     label_type: anm
@@ -26,7 +26,9 @@ mono:
     test_ratio: 0.15
     num_workers: 4
     log_every_n_steps: 2
-bi:
+  best_anm:
+  best_source:
+bi_label_ner:
   test:
     desc: 완디비에 저장되는지 테스트하기 위한 버전. 그래서 에폭이 2밖에 되지 않음.
     bert: kykim/bert-kor-base
@@ -51,4 +53,32 @@ bi:
     test_ratio: 0.15
     num_workers: 4
     log_every_n_steps: 2
+  best:
+
+bi_label_ner_with_bilstm:
+  test:
+    desc: 완디비에 저장되는지 테스트하기 위한 버전. 그래서 에폭이 2밖에 되지 않음.
+    bert: kykim/bert-kor-base
+    max_epochs: 2
+    max_length: 123
+    lr: 0.00001
+    seed: 123
+    batch_size: 32
+    val_ratio: 0.15
+    test_ratio: 0.15
+    num_workers: 4
+    log_every_n_steps: 2
+  overfit:
+    desc: 첫번째 버전, 목표는 학습데이터에 오버피팅
+    bert: kykim/bert-kor-base
+    max_epochs: 10
+    max_length: 123
+    lr: 0.00001
+    seed: 123
+    batch_size: 32
+    val_ratio: 0.15
+    test_ratio: 0.15
+    num_workers: 4
+    log_every_n_steps: 2
+  best:
 
