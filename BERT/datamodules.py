@@ -32,6 +32,7 @@ class AnmSourceNERDataModule(LightningDataModule):
         self.config = config
         self.tokenizer = tokenizer
         # to be built
+        self.dataset = None
         self.train: Optional[NERDataset] = None
         self.val: Optional[NERDataset] = None
         self.test: Optional[NERDataset] = None
@@ -50,13 +51,13 @@ class AnmSourceNERDataModule(LightningDataModule):
         # -- build the tensors, and thereby the dataset --- #
         inputs = InputsBuilder(self.tokenizer, sentences, self.config['max_length'])()  # (N, 3, L)
         targets = TargetsBuilder(self.tokenizer, sentences, self.config['max_length'])()  # (N, 2, L)
-        dataset = NERDataset(inputs, targets)
+        self.dataset = NERDataset(inputs, targets)
         # --- split the dataset into train,val and test --- #
-        val_size = int(len(dataset) * self.config["val_ratio"])
-        test_size = int(len(dataset) * self.config["test_ratio"])
-        train_size = len(dataset) - val_size - test_size
+        val_size = int(len(self.dataset) * self.config["val_ratio"])
+        test_size = int(len(self.dataset) * self.config["test_ratio"])
+        train_size = len(self.dataset) - val_size - test_size
         self.train, self.val, self.test = \
-            random_split(dataset, lengths=(train_size, val_size, test_size),
+            random_split(self.dataset, lengths=(train_size, val_size, test_size),
                          generator=torch.Generator().manual_seed(self.config['seed']))
 
     def train_dataloader(self) -> DataLoader:
@@ -85,18 +86,12 @@ class AnmDataNERModule(AnmSourceNERDataModule):
     """
     def setup(self, stage: Optional[str] = None) -> None:
         super(AnmDataNERModule, self).setup()
-        self.train.targets = self.train.targets[:, 0]  # (N, 2, L) -> (N, L)
-        self.val.targets = self.val.targets[:, 0]  # (N, 2, L) -> (N, L)
-        self.test.targets = self.test.targets[:, 0]  # (N, 2, L) -> (N, L)
-
+        self.dataset.targets = self.dataset.targets[:, 0]
 
 class SourceNERDataModule(AnmSourceNERDataModule):
     """
     (token, source)
     """
-
     def setup(self, stage: Optional[str] = None) -> None:
         super(SourceNERDataModule, self).setup()
-        self.train.targets = self.train.targets[:, 1]  # (N, 2, L) -> (N, L)
-        self.val.targets = self.val.targets[:, 1]  # (N, 2, L) -> (N, L)
-        self.test.targets = self.test.targets[:, 1]  # (N, 2, L) -> (N, L)
+        self.dataset.targets = self.dataset.targets[:, 1]

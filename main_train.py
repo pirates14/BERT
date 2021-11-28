@@ -9,9 +9,9 @@ import argparse
 import numpy as np
 import pytorch_lightning as pl
 from transformers import BertTokenizer, BertModel
-from BERT.datamodules import AnmSourceNERDataModule
+from BERT.datamodules import AnmSourceNERDataModule, AnmDataNERModule, SourceNERDataModule
 from BERT.loaders import load_config
-from BERT.models import BiLabelNER
+from BERT.models import BiLabelNER, MonoLabelNER
 from BERT.labels import ANM_LABELS, SOURCE_LABELS
 from BERT.paths import bi_label_ner_ckpt
 from pytorch_lightning.loggers import WandbLogger
@@ -30,8 +30,19 @@ def main():
     # --- prepare the model and the datamodule --- #
     tokenizer = BertTokenizer.from_pretrained(config['bert'])
     bert = BertModel.from_pretrained(config['bert'])
-    model = BiLabelNER(bert=bert, lr=float(config['lr']), num_labels_pair=(len(ANM_LABELS), len(SOURCE_LABELS)))
-    datamodule = AnmSourceNERDataModule(config, tokenizer)
+
+    if int(input('label_num : ')) == 3:
+        model = MonoLabelNER(bert=bert, lr=float(config['lr']), num_labels=len(ANM_LABELS),
+                             hidden_size=bert.config.hidden_size)
+        datamodule = AnmDataNERModule(config, tokenizer)
+    elif int(input('label_num : ')) == 15:
+        model = MonoLabelNER(bert=bert, lr=float(config['lr']), num_labels=len(SOURCE_LABELS),
+                             hidden_size=bert.config.hidden_size)
+        datamodule = SourceNERDataModule(config, tokenizer)
+    else:
+        model = BiLabelNER(bert=bert, lr=float(config['lr']), num_labels_pair=(len(ANM_LABELS), len(SOURCE_LABELS)))
+        datamodule = AnmSourceNERDataModule(config, tokenizer)
+
     # --- instantiate the trainer  --- #
     with wandb.init(project="BERT", config=config) as run:
         logger = WandbLogger(log_model=False)
