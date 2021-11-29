@@ -1,11 +1,8 @@
-from typing import List, Tuple
-
 import torch
+from typing import List, Tuple
 from transformers import BertTokenizer
-
-from BERT.classes import ANM_CLASSES, SOURCE_CLASSES
+from BERT.labels import ANM_LABELS, SOURCE_LABELS
 from keras_preprocessing.sequence import pad_sequences
-
 
 
 class TensorBuilder:
@@ -30,7 +27,8 @@ class InputsBuilder(TensorBuilder):
         ]
         encoded = [self.tokenizer.convert_tokens_to_ids(tokens) for tokens in sent2tokens]
         input_ids = torch.LongTensor(pad_sequences(encoded, maxlen=self.max_len, dtype=int,
-                                                   padding="post", value=self.tokenizer.pad_token_id)) # 패딩 토큰을 토크나이저에서 가져오기
+                                                   # 패딩 토큰을 토크나이저에서 가져오기
+                                                   padding="post", value=self.tokenizer.pad_token_id))
         token_type_ids = torch.zeros(size=(len(sent2tokens), self.max_len))  # 어차피 첫문장만 있음
         attention_mask = torch.where(input_ids != self.tokenizer.pad_token_id, 1, 0)  # 패딩인 것은 필요 없음
         inputs = torch.stack([input_ids, token_type_ids, attention_mask], dim=1)
@@ -61,17 +59,19 @@ class TargetsBuilder(TensorBuilder):
 
         # type : list of list of int
         anm_targets = [
-            [ANM_CLASSES.index(anm_label) for word, anm_label, source_label in sentence]
+            [ANM_LABELS.index(anm_label) for word, anm_label, source_label in sentence]
             for sentence in self.sentences
         ]
 
         source_targets = [
-            [SOURCE_CLASSES.index(source_label) for word, anm_label, source_label in sentence]
+            [SOURCE_LABELS.index(source_label) for word, anm_label, source_label in sentence]
             for sentence in self.sentences
         ]
 
-        anm_targets_p = pad_sequences(anm_targets, maxlen=self.max_len, padding='post', value=ANM_CLASSES.index("O"))
-        source_targets_p = pad_sequences(source_targets, maxlen=self.max_len, padding='post', value=SOURCE_CLASSES.index("O"))
+        anm_targets_p = pad_sequences(anm_targets, maxlen=self.max_len,
+                                      padding='post', value=ANM_LABELS.index("O"))
+        source_targets_p = pad_sequences(source_targets, maxlen=self.max_len,
+                                         padding='post', value=SOURCE_LABELS.index("O"))
 
         # (N, 2, L)
         targets = torch.stack([torch.Tensor(anm_targets_p),

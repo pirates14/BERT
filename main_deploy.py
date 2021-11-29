@@ -1,8 +1,8 @@
 
-from BERT.models import MultiLabelNER
+from BERT.models import BiLabelNER
 
 
-model = MultiLabelNER.load_from_checkpoint(...)
+model = BiLabelNER.load_from_checkpoint(...)
 
 
 def main():

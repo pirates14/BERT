@@ -1,7 +1,7 @@
-/venv
-
 /lightning_logs
-
 /data/source_anm_ner.ckpt
-
+# 이런저런 로그가 쌓이는 곳. 로그는 이미 완디비에 저장되기 때문에 필요가 없음
 /wandb
+# 모델 바이너리가 저장되는 곳. 모델 바이너리는 완디비에서 버전컨트롤 해야함
+/artifacts
+

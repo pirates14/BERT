@@ -1,167 +1,224 @@
 import torch
-import pytorch_lightning as pl
-from typing import Tuple, List
-from argparse import Namespace
-
 import torchmetrics
 from torch import nn
-from transformers import BertModel, BertTokenizer
-from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
+from typing import Tuple, Optional
+import pytorch_lightning as pl
 from torch.nn import functional as F
+from argparse import Namespace
+from transformers import BertModel
+from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 
 
-class MultiLabelNER(pl.LightningModule):
-    """
-    글자당 여러개의 개체명을 인식하는 모델.
-    """
-    def __init__(self, bert: BertModel, lr: float):
+class MonoLabelNER(pl.LightningModule):
+    # artifact 의 이름을 여기에 정의하기.
+    name: str = "mono_label_ner"
+
+    def __init__(self, lr: float, num_labels: int, hidden_size: int, bert: BertModel = None):
+        """
+        :param lr:
+        :param num_labels:
+        :param hidden_size:
+        :param bert: 이 부분이 None이 될 수 있도록 해야 BiLabelNER 의 구성폼으로 사용가능
+        """
         super().__init__()
         self.bert = bert
-        self.W_1 = nn.Linear(self.bert.config.hidden_size, 3)
-        self.drop = nn.Dropout(p=0.3)
-        self.W_2 = nn.Linear(self.bert.config.hidden_size, 15)
-        self.train_acc_1 = torchmetrics.Accuracy()
-        self.train_acc_2 = torchmetrics.Accuracy()
-        self.val_acc_1 = torchmetrics.Accuracy()
-        self.val_acc_2 = torchmetrics.Accuracy()
-        self.test_acc_1 = torchmetrics.Accuracy()
-        self.test_acc_2 = torchmetrics.Accuracy()
-        self.save_hyperparameters(Namespace(lr=lr))
+        self.W = nn.Linear(hidden_size, num_labels)
+        self.train_f1 = torchmetrics.F1(num_classes=num_labels, mdmc_average='global')
+        self.val_f1 = torchmetrics.F1(num_classes=num_labels, mdmc_average='global')
+        self.test_f1 = torchmetrics.F1(num_classes=num_labels, mdmc_average='global')
+        self.attention_mask: Optional[torch.Tensor] = None
+        self.save_hyperparameters(Namespace(lr=lr, num_labels=num_labels))
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        input_ids = inputs[:, 0]  # (N, 3, L) -> (N, L)
+        token_type_ids = inputs[:, 1]  # (N, 3, L) -> (N, L).
+        self.attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
+        H_all = self.bert(input_ids=input_ids,
+                          token_type_ids=token_type_ids,
+                          attention_mask=self.attention_mask)[0]  # (N, L, H)
+        return H_all
+
+    def predict(self, inputs: torch.Tensor) -> torch.Tensor:
+        """
+        :param inputs: (N, 3, L)
+        :return:
+        """
+        hidden_stats = self.forward(inputs)
+        return self.predict_given_forward(hidden_stats)
+
+    def predict_given_forward(self, H_all: torch.Tensor):
+        logits = self.W(H_all)  # (N, L, H) -> (N, L, T)
+        probs = torch.softmax(logits, -1)  # -> (N, L, T)
+        labels = torch.argmax(probs, -1)  # (N, L, T) -> (N, L)
+        return labels
+
+    def configure_optimizers(self):
+        # 옵티마이저 설정은 여기에서
+        return torch.optim.AdamW(self.parameters(), lr=self.hparams['lr'])
+
+    def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
+        inputs, targets = batch  # (N, 3, L), (N, L)
+        # H_all = H_all[:, 1:]  # (N, L, H) -> (N, L-1, H)
+        # H_all 로 부터 각 레이블에 해당하는 로짓값을 구하기
+        H_all = self.forward(inputs)
+        return self.training_step_given_forward(H_all, self.attention_mask, targets)
+
+    def training_step_given_forward(self, H_all: torch.Tensor,
+                                    attention_mask: torch.Tensor, targets: torch.Tensor) -> dict:
+        logits = self.W(H_all)  # (N, L, H) -> (N, L, T)
+        logits = torch.einsum("nlc->ncl", logits)  # (N, L, T_1) -> (N, T_1, L)
+        loss = F.cross_entropy(logits, targets)  # (N, T_1, L), (N, L) -> (N, L)
+        # loss = torch.masked_fill(loss, mask=attention_mask == 0, value=0)
+        loss = loss.sum()
+        # 정확도 계산 - 배치의 accuracy 수집
+        return {
+            "loss": loss,
+            # 이미 학습에 사용했으니, 굳이 기울기를 유지할필요가 없다.
+            "logits": logits.detach(),
+        }
+
+    def on_train_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args) -> None:
+        _, targets = batch
+        loss = outputs["loss"]
+        logits = outputs["logits"]
+        f1 = self.train_f1(logits, targets)
+        self.log("Train/loss", loss, on_step=True)
+        self.log("Train/f1", f1, on_step=True)
+
+    def on_train_epoch_end(self) -> None:
+        self.train_f1.reset()
+
+    def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
+        return self.training_step(batch)
+
+    def on_validation_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args) -> None:
+        _, targets = batch
+        loss = outputs["loss"]
+        logits = outputs["logits"]
+        f1 = self.val_f1(logits, targets)
+        self.log("Validation/loss", loss, on_step=True)
+        self.log("Validation/f1", f1, on_step=True)
+
+    def on_validation_epoch_end(self) -> None:
+        self.val_f1.reset()
+
+    def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
+        return self.training_step(batch)
+
+    def on_test_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args):
+        _, targets = batch
+        logits = outputs["logits"]
+        f1 = self.test_f1(logits, targets)
+        self.log("Test/f1", f1, on_step=True)
+
+    def on_test_epoch_end(self):
+        self.test_f1.reset()
+
+    def train_dataloader(self) -> TRAIN_DATALOADERS:
+        pass
+
+    def test_dataloader(self) -> EVAL_DATALOADERS:
+        pass
+
+    def val_dataloader(self) -> EVAL_DATALOADERS:
+        pass
+
+    def predict_dataloader(self) -> EVAL_DATALOADERS:
+        pass
+
+
+class BiLabelNER(pl.LightningModule):
+    """
+    글자당 두개의 레이블을 동시에 에측하는 모델.
+    """
+    name: str = "bi_label_ner"
+
+    def __init__(self, bert: BertModel, lr: float, num_labels_pair: Tuple[int, int]):
+        super().__init__()
+        self.bert = bert
+        self.mono_1 = MonoLabelNER(lr=lr, num_labels=num_labels_pair[0], hidden_size=bert.config.hidden_size)
+        self.mono_2 = MonoLabelNER(lr=lr, num_labels=num_labels_pair[1], hidden_size=bert.config.hidden_size)
+        self.attention_mask: Optional[torch.Tensor] = None
+        self.save_hyperparameters(Namespace(lr=lr, num_labels_pair=num_labels_pair))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         input_ids = inputs[:, 0]  # (N, 3, L) -> (N, L)
         token_type_ids = inputs[:, 1]  # (N, 3, L) -> (N, L)
-        attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
+        self.attention_mask = inputs[:, 2]  # (N, 3, L) -> (N, L)
         H_all = self.bert(input_ids=input_ids,
                           token_type_ids=token_type_ids,
-                          attention_mask=attention_mask)[0]   # (N, L, H)
+                          attention_mask=self.attention_mask)[0]  # (N, L, H)
         return H_all
-
-    def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
-        inputs, targets = batch  # (N, L, 3), (N, L, 2)
-        H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
-        # H_all = H_all[:, 1:]  # (N, L, H) -> (N, L-1, H)
-        # H_all로 부터 각 레이블에 해당하는 로짓값을 구하기
-        logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
-        logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
-
-        logits_1 = torch.einsum("nlc->ncl", logits_1)    # (N, L, T_1) -> (N, T_1, L)
-        logits_2 = torch.einsum("nlc->ncl", logits_2)    # (N, L, T_2) -> (N, T_2, L)
-
-        labels_1 = targets[:, 0]  # (N, 2, L) -> (N, L)
-        labels_2 = targets[:, 1]  # (N, 2, L) -> (N, L)
-
-        loss_1 = F.cross_entropy(logits_1, labels_1)    # (N, T_1, L), (N, L) -> (N, L)
-        loss_2 = F.cross_entropy(logits_2, labels_2)    # (N, T_2, L), (N, L) -> (N, L)
-
-        loss_1 = loss_1.sum()   # (N, L) -> 1
-        loss_2 = loss_2.sum()   # (N, L) -> 1
-
-        # 정확도 계산 - 배치의 accuracy 수집
-        self.train_acc_1.update(logits_1, labels_1)
-        self.train_acc_2.update(logits_2, labels_2)
-
-        # multitask learning
-        loss = loss_1 + loss_2
-        self.log("Train/loss", loss)
-        return {
-            "loss": loss
-        }
-
-    def on_train_epoch_end(self) -> None:
-        acc_1 = self.train_acc_1.compute()
-        acc_2 = self.train_acc_2.compute()
-        self.train_acc_1.reset()
-        self.train_acc_2.reset()
-        self.log("Train/acc_1", acc_1)
-        self.log("Train/acc_2", acc_2)
 
     def predict(self, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         :param inputs: (N, 3, L)
         :return:
         """
-        H_all = self.forward(inputs)  # (N,3, L) -> (N, L, H)
-
-        logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
-        logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
-
-        probs_1 = torch.softmax(logits_1, 2)  # -> (N, L, T_1)
-        probs_2 = torch.softmax(logits_2, 2)  # -> (N, L, T_2)
-
-        labels_1 = torch.argmax(probs_1, 2)  # (N, L, T_1) -> (N, L)
-        labels_2 = torch.argmax(probs_2, 2)  # (N, L, T_2) -> (N, L)
-
+        hidden_states = self.forward(inputs)
+        labels_1 = self.mono_1.predict_given_forward(hidden_states)  # (N, 3, L) -> (N, L)
+        labels_2 = self.mono_2.predict_given_forward(hidden_states)  # (N, 3, L) -> (N, L)
         return labels_1, labels_2
 
     def configure_optimizers(self):
-        # 옵티마이저 설정은 여기에서
         return torch.optim.AdamW(self.parameters(), lr=self.hparams['lr'])
 
-    def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
-        inputs, targets = batch  # (N, L, 3), (N, L, 2)
-        H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
-
-        logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
-        logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
-
-        logits_1 = torch.einsum("nlc->ncl", logits_1)    # (N, L, T_1) -> (N, T_1, L)
-        logits_2 = torch.einsum("nlc->ncl", logits_2)    # (N, L, T_2) -> (N, T_2, L)
-
-        labels_1 = targets[:, 0]  # (N, 2, L) -> (N, L)
-        labels_2 = targets[:, 1]  # (N, 2, L) -> (N, L)
-
-        loss_1 = F.cross_entropy(logits_1, labels_1)    # (N, T_1, L), (N, L) -> (N, L)
-        loss_2 = F.cross_entropy(logits_2, labels_2)    # (N, T_2, L), (N, L) -> (N, L)
-
-        loss_1 = loss_1.sum()   # (N, L) -> 1
-        loss_2 = loss_2.sum()   # (N, L) -> 1
-
-        # 정확도 계산
-        self.val_acc_1.update(logits_1, labels_1)
-        self.val_acc_2.update(logits_2, labels_2)
-
-        # multitask learning
-        loss = loss_1 + loss_2
-        self.log("Validation/loss", loss)
+    def training_step(self, batch: Tuple[torch.Tensor, torch.tensor]) -> dict:
+        inputs, targets = batch
+        hidden_states = self.forward(inputs)
+        outputs_1 = self.mono_1.training_step_given_forward(hidden_states, self.attention_mask, targets[:, 0])
+        outputs_2 = self.mono_2.training_step_given_forward(hidden_states, self.attention_mask, targets[:, 1])
+        loss = outputs_1["loss"] + outputs_2["loss"]  # unweighted multi-task learning
         return {
-            'loss': loss
+            "loss": loss,
+            "logits_1": outputs_1["logits"],
+            "logits_2": outputs_2["logits"]
         }
 
+    def on_train_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args) -> None:
+        _, targets = batch
+        f1_1 = self.mono_1.train_f1(outputs["logits_1"], targets[:, 0])
+        f1_2 = self.mono_2.train_f1(outputs["logits_2"], targets[:, 1])
+        self.log("Train/loss", outputs['loss'], on_step=True)  # 로스는 각 배치별로 로깅
+        self.log("Train/f1_1", f1_1, on_step=True)
+        self.log("Train/f1_2", f1_2, on_step=True)
+
+    def on_train_epoch_end(self) -> None:
+        self.mono_1.train_f1.reset()
+        self.mono_2.train_f1.reset()
+
+    def validation_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
+        return self.training_step(batch)
+
+    def on_validation_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args) -> None:
+        _, targets = batch
+        f1_1 = self.mono_1.val_f1(outputs["logits_1"], targets[:, 0])
+        f1_2 = self.mono_2.val_f1(outputs["logits_2"], targets[:, 1])
+        self.log("Validation/loss", outputs['loss'], on_step=True)  # 로스는 각 배치별로 로깅
+        self.log("Validation/f1_1", f1_1, on_step=True)
+        self.log("Validation/f1_2", f1_2, on_step=True)
+
     def on_validation_epoch_end(self) -> None:
-        acc_1 = self.val_acc_1.compute()
-        acc_2 = self.val_acc_2.compute()
-        self.val_acc_1.reset()
-        self.val_acc_2.reset()
-        self.log("Validation/acc_1", acc_1)
-        self.log("Validation/acc_2", acc_2)
+        self.mono_1.val_f1.reset()
+        self.mono_2.val_f1.reset()
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.tensor], *args) -> dict:
-        inputs, targets = batch  # (N, L, 3), (N, L, 2)
-        H_all = self.forward(inputs)  # (N, 3, L) -> (N, L, H)
+        return self.training_step(batch)
 
-        logits_1 = self.W_1(H_all)  # (N, L, H) -> (N, L, T_1)  T_1 =  W_1이 분류하는 토큰의 개수 / 3
-        logits_2 = self.W_2(H_all)  # (N, L, H) -> (N, L, T_2)  T_2 = W_2가 분류하는 토큰의 개수 / 13
-
-        logits_1 = torch.einsum("nlc->ncl", logits_1)    # (N, L, T_1) -> (N, T_1, L)
-        logits_2 = torch.einsum("nlc->ncl", logits_2)    # (N, L, T_2) -> (N, T_2, L)
-
-        labels_1 = targets[:, 0]  # (N, 2, L) -> (N, L)
-        labels_2 = targets[:, 1]  # (N, 2, L) -> (N, L)
-
-        # 정확도 계산
-        # https://torchmetrics.readthedocs.io/en/latest/references/modules.html#id3
-        # probs/logits 다 상관없음.
-        self.test_acc_1.update(logits_1, labels_1)
-        self.test_acc_2.update(logits_2, labels_2)
+    def on_test_batch_end(self, outputs: dict, batch: Tuple[torch.Tensor, torch.Tensor], *args):
+        _, targets = batch
+        logits_1 = outputs["logits_1"]
+        logits_2 = outputs["logits_2"]
+        self.mono_1.test_f1.update(logits_1, targets[:, 0])
+        self.mono_2.test_f1.update(logits_2, targets[:, 1])
 
     def on_test_epoch_end(self) -> None:
-        acc_1 = self.test_acc_1.compute()
-        acc_2 = self.test_acc_2.compute()
-        self.test_acc_1.reset()
-        self.test_acc_2.reset()
-        self.log("Test/acc_1", acc_1)
-        self.log("Test/acc_2", acc_2)
+        f1_1 = self.mono_1.test_f1.compute()
+        f1_2 = self.mono_2.test_f1.compute()
+        self.mono_1.test_f1.reset()
+        self.mono_2.test_f1.reset()
+        self.log("Test/f1_1", f1_1, on_epoch=True)
+        self.log("Test/f1_2", f1_2, on_epoch=True)
 
     # boilerplate - 필요는 없는데 구현은 해야해서 그냥 여기에 둠.
     def train_dataloader(self) -> TRAIN_DATALOADERS:
@@ -175,3 +232,17 @@ class MultiLabelNER(pl.LightningModule):
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         pass
+
+
+class BiLabelNERWithBiLSTM(BiLabelNER):
+
+    name: str = "bi_label_ner_with_bilstm"
+
+    def __init__(self, bert: BertModel, lr: float, num_labels_pair: Tuple[int, int]):
+        super().__init__(bert, lr, num_labels_pair)
+        self.bilstm = nn.LSTM(bert.config.hidden_size, bidirectional=True, hidden_size=bert.config.hidden_size// 2, batch_first=True)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        H_all = super(BiLabelNERWithBiLSTM, self).forward(inputs)
+        hidden_states, _ = self.bilstm(H_all)
+        return hidden_states
