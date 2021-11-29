@@ -27,7 +27,31 @@ mono_label_ner:
     num_workers: 4
     log_every_n_steps: 2
   best_anm:
+    desc: 익명 취재원 개체명 인식
+    label_type: anm
+    bert: kykim/bert-kor-base
+    max_epochs: 3
+    max_length: 123
+    lr: 0.00001
+    seed: 123
+    batch_size: 32
+    val_ratio: 0.15
+    test_ratio: 0.15
+    num_workers: 4
+    log_every_n_steps: 2
   best_source:
+    desc: best source
+    label_type: source
+    bert: kykim/bert-kor-base
+    max_epochs: 4
+    max_length: 123
+    lr: 0.00001
+    seed: 123
+    batch_size: 32
+    val_ratio: 0.15
+    test_ratio: 0.15
+    num_workers: 4
+    log_every_n_steps: 2
 bi_label_ner:
   test:
     desc: 완디비에 저장되는지 테스트하기 위한 버전. 그래서 에폭이 2밖에 되지 않음.
@@ -54,6 +78,17 @@ bi_label_ner:
     num_workers: 4
     log_every_n_steps: 2
   best:
+    desc: best 에폭
+    bert: kykim/bert-kor-base
+    max_epochs: 4
+    max_length: 123
+    lr: 0.00001
+    seed: 123
+    batch_size: 32
+    val_ratio: 0.15
+    test_ratio: 0.15
+    num_workers: 4
+    log_every_n_steps: 2
 
 bi_label_ner_with_bilstm:
   test:
@@ -81,4 +116,14 @@ bi_label_ner_with_bilstm:
     num_workers: 4
     log_every_n_steps: 2
   best:
-
+    desc: best 에폭
+    bert: kykim/bert-kor-base
+    max_epochs: 11
+    max_length: 123
+    lr: 0.00001
+    seed: 123
+    batch_size: 32
+    val_ratio: 0.15
+    test_ratio: 0.15
+    num_workers: 4
+    log_every_n_steps: 2
