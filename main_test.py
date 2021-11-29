@@ -13,17 +13,18 @@ import numpy as np
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from transformers import BertTokenizer, AutoModel, AutoConfig
-from BERT.datamodules import AnmSourceNERDataModule
+from BERT.datamodules import AnmSourceNERDataModule, SourceNERDataModule, AnmNERDataModule
 from BERT.loaders import load_config
-from BERT.models import BiLabelNER
+from BERT.models import BiLabelNER, BiLabelNERWithBiLSTM, MonoLabelNER
 
 
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ver", type=str, default="test")
+    parser.add_argument("--model", type=str, default="mono_label_ner")
+    parser.add_argument("--ver", type=str, default="test_anm")
     args = parser.parse_args()
-    config = load_config(args.ver)
+    config = load_config(args.model, args.ver)
     config.update(vars(args))  # command-line arguments 도 기록하기!
     # --- fix random seeds -- #
     torch.manual_seed(config['seed'])

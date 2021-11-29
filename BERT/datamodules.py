@@ -80,12 +80,12 @@ class AnmSourceNERDataModule(LightningDataModule):
         pass
 
 
-class AnmDataNERModule(AnmSourceNERDataModule):
+class AnmNERDataModule(AnmSourceNERDataModule):
     """
     (token, anm)
     """
     def setup(self, stage: Optional[str] = None) -> None:
-        super(AnmDataNERModule, self).setup()
+        super(AnmNERDataModule, self).setup()
         self.dataset.targets = self.dataset.targets[:, 0]
 
 class SourceNERDataModule(AnmSourceNERDataModule):

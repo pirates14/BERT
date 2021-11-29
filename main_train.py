@@ -9,7 +9,7 @@ import argparse
 import numpy as np
 import pytorch_lightning as pl
 from transformers import BertTokenizer, BertModel
-from BERT.datamodules import AnmSourceNERDataModule, AnmDataNERModule, SourceNERDataModule
+from BERT.datamodules import AnmSourceNERDataModule, AnmNERDataModule, SourceNERDataModule
 from BERT.loaders import load_config
 from BERT.models import BiLabelNER, MonoLabelNER, BiLabelNERWithBiLSTM
 from BERT.labels import ANM_LABELS, SOURCE_LABELS
@@ -19,7 +19,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default="mono")
+    parser.add_argument("--model", type=str, default="mono_label_ner")
     parser.add_argument("--ver", type=str, default="test_anm")
     args = parser.parse_args()
     config = load_config(args.model, args.ver)
@@ -44,7 +44,7 @@ def main():
         if config['label_type'] == "anm":
             model = MonoLabelNER(bert=bert, lr=float(config['lr']), num_labels=len(ANM_LABELS),
                                  hidden_size=bert.config.hidden_size)
-            datamodule = AnmDataNERModule(config, tokenizer)
+            datamodule = AnmNERDataModule(config, tokenizer)
         elif config['label_type'] == "source":
             model = MonoLabelNER(bert=bert, lr=float(config['lr']), num_labels=len(SOURCE_LABELS),
                                  hidden_size=bert.config.hidden_size)
