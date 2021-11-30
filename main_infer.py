@@ -35,7 +35,7 @@ def main():
         # download a pre-trained model from wandb
         artifact = run.use_artifact(f"{BiLabelNER.name}:{config['ver']}")
         model_path = artifact.checkout()
-        model = BiLabelNER.load_from_checkpoint(path.join(model_path, "ner.ckpt"), bert=bert)
+        model = BiLabelNER.load_from_checkpoint(path.join(model_path, "ner.ckpt"), bert=bert, strict=False)
         tokens: List[str] = tokenizer.tokenize(config['text'])
         sentences: List[List[Tuple[str, str, str]]] = [[(token, "", "") for token in tokens]]
         inputs = InputsBuilder(tokenizer, sentences, config['max_length'])()
