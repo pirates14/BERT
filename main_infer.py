@@ -11,18 +11,17 @@ from os import path
 from typing import List, Tuple
 from transformers import BertTokenizer, AutoConfig, AutoModel
 from BERT.loaders import load_config
-from BERT.models import BiLabelNER
+from BERT.models import BiLabelNER, BiLabelNERWithBiLSTM
 from BERT.tensors import InputsBuilder
 from BERT.labels import SOURCE_LABELS, ANM_LABELS
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default="mono_label_ner")
     parser.add_argument("--ver", type=str, default="overfit")
     parser.add_argument("--text", type=str, default="[CLS] 폴리티코는 소식통 3명을 인용해 바이든 당선인이 미 육군에서 흑인 최초 기록을 여러 차례 세운 오스틴을 국방장관에 지명할 예정이라고 전했다 [SEP]")
     args = parser.parse_args()
-    config = load_config(args.model, args.ver)
+    config = load_config(args.ver)
     config.update(vars(args))  # command-line arguments 도 기록하기!
     # --- fix random seeds -- #
     torch.manual_seed(config['seed'])
@@ -31,11 +30,11 @@ def main():
     tokenizer = BertTokenizer.from_pretrained(config['bert'])
     bert = AutoModel.from_config(AutoConfig.from_pretrained(config['bert']))
 
-    with wandb.init(project="BERT", config=config) as run:
+    with wandb.init(entity="pirates14", project="BERT", config=config) as run:
         # download a pre-trained model from wandb
-        artifact = run.use_artifact(f"{BiLabelNER.name}:{config['ver']}")
+        artifact = run.use_artifact(f"{BiLabelNERWithBiLSTM.name}:{config['ver']}")
         model_path = artifact.checkout()
-        model = BiLabelNER.load_from_checkpoint(path.join(model_path, "ner.ckpt"), bert=bert, strict=False)
+        model = BiLabelNERWithBiLSTM.load_from_checkpoint(path.join(model_path, "ner.ckpt"), bert=bert)
         tokens: List[str] = tokenizer.tokenize(config['text'])
         sentences: List[List[Tuple[str, str, str]]] = [[(token, "", "") for token in tokens]]
         inputs = InputsBuilder(tokenizer, sentences, config['max_length'])()
